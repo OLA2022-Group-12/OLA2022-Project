@@ -20,6 +20,7 @@ jupyter = "^1.0.0"
 pytest = "^7.1.2"
 black = "^22.3.0"
 pre-commit = "^2.18.1"
+hypothesis = {version = "^6.46.2", extras = ["numpy"]}
 
 [tool.poetry.scripts]
 # command_name = module_for_handler : function_for_handler
