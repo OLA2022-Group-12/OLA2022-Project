@@ -32,7 +32,6 @@ jobs:
       - name: Run tests
         run: poetry run pytest
   format:
-    name: Format code using black
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -46,3 +45,10 @@ jobs:
         uses: reviewdog/action-suggester@v1
         with:
           tool_name: blackfmt
+
+  spellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check files for typos
+        uses: rojopolis/spellcheck-github-actions@0.23.0
