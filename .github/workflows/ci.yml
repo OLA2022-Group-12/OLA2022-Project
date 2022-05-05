@@ -1,4 +1,4 @@
-name: Poetry Application
+name: CI
 
 permissions:
   contents: read
@@ -14,8 +14,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.10']
-        poetry-version: [1.1.13]
+        python-version: ['3.10']  # We could run for multiple python versions, but takes time
+        poetry-version: [1.1.13]  # And also multiple poetry versions, but not nessecary
         os: [ubuntu-18.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -31,3 +31,18 @@ jobs:
         run: poetry install
       - name: Run tests
         run: poetry run pytest
+  format:
+    name: Format code using black
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check files using the black formatter
+        uses: rickstaa/action-black@v1
+        id: action_black
+        with:
+          black_args: "."
+      - name: Annotate diff changes using reviewdog
+        if: steps.action_black.outputs.is_formatted == 'true'
+        uses: reviewdog/action-suggester@v1
+        with:
+          tool_name: blackfmt
