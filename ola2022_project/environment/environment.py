@@ -27,13 +27,15 @@ max_items = 3
 
 np.random.seed(1337)
 
+# Products graph's matrix. It's a dummy matrix, should be initialized with populate_graphs
 graph = np.random.rand(5,5)
 
 
 def populate_graph(size=5, fully_connected=True, zeros_probability=0.5):
 
     ''' This function should always be called before using the environment.
-    By default generates a 5x5 fully connected graph.
+    By default generates a 5x5 fully connected graph. The graph has no
+    auto-loops
 
     Arguments:
         size: integer corresponding to the number of nodes
@@ -134,7 +136,8 @@ def get_day_of_interactions(num_customers):
 
 
 def go_to_page(user_class, primary_product, items_bought):
-    '''Shows the user a page of the specified primary products. 
+    '''Shouldn't be called from outside. Shows the user a page of the specified
+    primary products.
     
     After buying the primary product two secondary products are shown. Clicking
     on them shows the user another page where the clicked product is primary.
