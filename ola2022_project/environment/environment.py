@@ -19,11 +19,6 @@ product_prices = [10, 15, 25, 18, 5]
 # upper bound.
 parameters = [[0.17,4.5,50], [0.15,5,65], [0.22,5.3,100]]
 
-# Simple function of a straight line with a lower bound of 0. Argument budget is
-# an integer representing the budget. Argument params is a 2-element array
-# containing the 2 linear parameters.
-clicks = lambda budget, params: max(0, budget * params[0] + params[1])
-
 # The competitor budget is assumed to be constant, since the competitor is
 # non-strategic
 competitor_budget = 100
