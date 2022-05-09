@@ -2,7 +2,7 @@
 name = "ola2022_project"
 version = "0.1.0"
 description = "Project for the Online Learning Applications class at Politecnico di Milano a.a. 2021-2022"
-authors = ["Ole Martin Ruud <dev@barskern.no>", "Roberto Reggiani"]
+authors = ["Ole Martin Ruud <dev@barskern.no>", "Roberto Reggiani", "Davide Rigamonti"]
 license = "MIT"
 
 [tool.poetry.dependencies]
