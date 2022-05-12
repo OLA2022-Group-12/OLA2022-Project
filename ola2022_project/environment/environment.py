@@ -1,41 +1,5 @@
 import numpy as np
-
-'''
-These are all dummy values. There is no particular criteria in how they were chosen.
-They can all be tuned to make the environment behave differently
-'''
-
-# Probability of every class to show up. They must add up to 1
-class_ratios = [0.3, 0.6, 0.1]
-
-# Reservation price of every class
-reservation_prices = [10, 30, 20]
-
-# Price of the 5 products
-product_prices = [10, 15, 25, 18, 5]
-
-# Parameters of the alpha functions for every class. The functions sigmoidal.
-# The first value is the steepness, the second is the shift and the third is the
-# upper bound.
-parameters = [[0.17,4.5,50], [0.15,5,65], [0.22,5.3,100]]
-
-# The competitor budget is assumed to be constant, since the competitor is
-# non-strategic
-competitor_budget = 100
-
-# Lambda parameter, which is the probability of osserving the next secondary product
-# according to the project's assignment
-lam = 0.5
-
-# Max number of items a customer can buy of a certain product. The number of
-# bought items is determined randomly with max_items as upper bound
-max_items = 3
-
-np.random.seed(1337)
-
-# Products graph's matrix. It's a dummy matrix, should be initialized with populate_graphs
-graph = np.random.rand(5,5)
-
+from environment_data import data
 
 def alpha_function(budget, steepness, shift, upper_bound):
 
@@ -95,7 +59,7 @@ def populate_graph(size=5, fully_connected=True, zeros_probability=0.5):
     np.fill_diagonal(graph, 0)
 
 
-def get_interaction(user_class, primary_product):
+def get_interaction(user_class, primary_product, env_data=data):
     '''Computes a single interaction and returns it.
 
     This method shouldn't be called on its own, but only via the
@@ -121,12 +85,12 @@ def get_interaction(user_class, primary_product):
     # the 5 products, otherwise the user landed on a competitor product's page
     if primary_product != 0:
         primary_product -= 1
-        go_to_page(user_class, primary_product, items_bought)
+        go_to_page(user_class, primary_product, items_bought, env_data)
 
     return user_class, items_bought
 
 
-def get_day_of_interactions(num_customers, budgets):
+def get_day_of_interactions(num_customers, budgets, env_data=data):
     
     ''' Main method to be called when interacting with the environment. Outputs
     all the interactions of an entire day. When called generates new alphas from
@@ -147,11 +111,11 @@ def get_day_of_interactions(num_customers, budgets):
     '''
 
     # Competitor budget is added to the array of budgets
-    budgets = np.insert(budgets, 0, competitor_budget)
+    budgets = np.insert(budgets, 0, env_data.competitor_budget)
 
     # Computing total number of customers for each class based on class_ratios
-    customers_of_class_1 = int(num_customers*class_ratios[0])
-    customers_of_class_2 = int(num_customers*class_ratios[1])
+    customers_of_class_1 = int(num_customers*env_data.class_ratios[0])
+    customers_of_class_2 = int(num_customers*env_data.class_ratios[1])
     customers_of_class_3 = num_customers - customers_of_class_1 - customers_of_class_2
     customers_per_class = [customers_of_class_1, customers_of_class_2, customers_of_class_3]
 
@@ -159,7 +123,7 @@ def get_day_of_interactions(num_customers, budgets):
 
     # For every class, product ratios are computed
     for i in range(3):
-        click_ratios = alpha_function(budgets, parameters[i][0], parameters[i][1], parameters[i][2])
+        click_ratios = alpha_function(budgets, env_data.parameters[i][0], env_data.parameters[i][1], env_data.parameters[i][2])
         alpha_ratios = np.random.dirichlet(click_ratios)
         
         # This array will contain how many customers will land on a certain product page
@@ -174,7 +138,7 @@ def get_day_of_interactions(num_customers, budgets):
         # users are landed on the right and the interaction starts
         for idx, ratio in enumerate(product_ratios):
             for interaction in range(ratio):
-                user_class, items = get_interaction(i, idx)
+                user_class, items = get_interaction(i, idx, env_data)
                 total_interactions.append((user_class, items))
 
     # Shuffle the list to make data more realistic
@@ -182,7 +146,7 @@ def get_day_of_interactions(num_customers, budgets):
     return total_interactions
 
 
-def go_to_page(user_class, primary_product, items_bought):
+def go_to_page(user_class, primary_product, items_bought, env_data=data):
 
     '''Shouldn't be called from outside. Shows the user a page of the specified
     primary products.
@@ -198,10 +162,10 @@ def go_to_page(user_class, primary_product, items_bought):
     '''
     
     # Checks if the price of the primary product is under the reservation price of the user class
-    if product_prices[primary_product] < reservation_prices[user_class]:
+    if env_data.product_prices[primary_product] < env_data.reservation_prices[user_class]:
         
         # The customer buys a random quantity of the product between 1 and max_tems
-        items_bought[primary_product] += np.random.randint(1, max_items)
+        items_bought[primary_product] += np.random.randint(1, env_data.max_items)
 
         # Chooses 2 secondary products from all the 5 products excluding the current primay product
         available_prod = list(range(5))
@@ -211,11 +175,11 @@ def go_to_page(user_class, primary_product, items_bought):
         # If the user watches the second slot and clicks on the product he gets
         # redirected to a new primary product page where the secondary product
         # is the primary product
-        if np.random.rand() < graph[primary_product, secondary_products[0]] and not items_bought[secondary_products[0]]:
+        if np.random.rand() < env_data.graph[primary_product, secondary_products[0]] and not items_bought[secondary_products[0]]:
             go_to_page(user_class, secondary_products[0], items_bought)
         
         # When the user does not click on the secondary product in the first
         # slot if he observes and click on the second slot he gets redirected to
         # a new page where this secondary product is the primary product
-        elif np.random.rand() < graph[primary_product, secondary_products[1]] * lam and not items_bought[secondary_products[1]]:
+        elif np.random.rand() < env_data.graph[primary_product, secondary_products[1]] * env_data.lam and not items_bought[secondary_products[1]]:
             go_to_page(user_class, secondary_products[1], items_bought)
