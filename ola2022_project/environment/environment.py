@@ -5,7 +5,7 @@ These are all dummy values. There is no particular criteria in how they were cho
 They can all be tuned to make the environment behave differently
 '''
 
-# Probability of every class to show up. They should add up to 1
+# Probability of every class to show up. They must add up to 1
 class_ratios = [0.3, 0.6, 0.1]
 
 # Reservation price of every class
