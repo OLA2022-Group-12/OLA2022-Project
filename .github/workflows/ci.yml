@@ -33,6 +33,9 @@ jobs:
         run: poetry run pytest
   format:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v2
       - name: Check files using the black formatter
