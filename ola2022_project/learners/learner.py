@@ -40,13 +40,14 @@ class Learner(ABC):
 
     @classmethod
     @abstractmethod
-    def learn(self, reward):
+    def learn(self, reward, prediction):
 
         '''Updates the learner's properties according to the reward received.
 
         Arguments: 
             reward: the reward obtained from the environment, needed for the tuning of 
                 internal properties done by the learner
+            prediction: array containing the previous budget evaluation of the learner
         '''
 
         pass
