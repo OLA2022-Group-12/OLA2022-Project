@@ -5,28 +5,38 @@ class Learner(ABC):
 
     '''Generic Learner interface for interactive agents capable of learning the budget 
     distribution for a set of subcampaigns from the environment they exist in and the 
-    online feedback returned
+    online feedback returned.
     '''
 
+    def __init__(self, total_budget, collected_rewards):
+        self._total_budget = total_budget
+        self._collected_rewards = collected_rewards
+
     @property
-    @abstractmethod
     def total_budget(self):
 
         '''Overall total budget that the learner should subdivide optimally between
         products.
         '''
 
-        return 0
+        return self._total_budget
+
+    @total_budget.setter
+    def total_budget(self, value):
+        self._total_budget = value
 
     @property
-    @abstractmethod
     def collected_rewards(self):
 
         '''Array of values representing all of the rewards collected by the learner
         during its life
         '''
 
-        return np.array([])
+        return self._collected_rewards
+
+    @collected_rewards.setter
+    def collected_rewards(self, value):
+        self._collected_rewards = value
 
     @classmethod
     @abstractmethod
@@ -39,11 +49,11 @@ class Learner(ABC):
                 internal properties done by the learner
         '''
 
-        
+        pass
 
     @classmethod
     @abstractmethod
-    def infer(self, data):
+    def predict(self, data):
 
         '''Makes an inference about the values of the budgets for the subcampaigns
         utilizing the information gathered over time and the current state of the
