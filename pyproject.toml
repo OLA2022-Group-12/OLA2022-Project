@@ -22,6 +22,7 @@ black = "^22.3.0"
 pre-commit = "^2.18.1"
 hypothesis = {version = "^6.46.2", extras = ["numpy"]}
 flake8 = "^4.0.1"
+pep8-naming = "^0.12.1"
 
 [tool.poetry.scripts]
 # command_name = module_for_handler : function_for_handler
