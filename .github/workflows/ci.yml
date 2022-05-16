@@ -31,6 +31,8 @@ jobs:
         run: poetry install
       - name: Run tests
         run: poetry run pytest
+      - name: Run python linting
+        run: poetry run flake8
   format:
     runs-on: ubuntu-latest
     steps:
