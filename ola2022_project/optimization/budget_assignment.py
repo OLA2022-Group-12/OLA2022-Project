@@ -5,43 +5,43 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def budget_assignment(C):
-    """Solve the budget assignment problem over the value matrix C.
+def budget_assignment(c):
+    """Solve the budget assignment problem over the value matrix c.
 
-    The matrix C is assumed to be divided into N rows (campaigns) and M columns
+    The matrix c is assumed to be divided into n rows (campaigns) and m columns
     (budget fractions). As the columns describe budget fractions from 0 to B,
-    where B is the max budget, the function only needs to consider that the sum
-    of the returned allocations/selections cannot exceed M - 1. To put it
-    another way, column j repreresents the value of allocating j * (B / M) of
+    where b is the max budget, the function only needs to consider that the sum
+    of the returned allocations/selections cannot exceed m - 1. To put it
+    another way, column j repreresents the value of allocating j * (b / m) of
     the budget to the campaigns.
 
     Arguments:
-        C: numpy matrix (NxM) where the value is the reward of assigning budget
+        c: numpy matrix (nxm) where the value is the reward of assigning budget
            j to campaign i
 
     Returns:
         a numpy vector where row i has the index of selected column j of C
     """
 
-    N, M = np.shape(C)
-    if M == 0 or N == 0:
+    n, m = np.shape(c)
+    if m == 0 or n == 0:
         return np.array([])
 
     # Setup a dp table (which will contain the computed cumulative value of a
     # certain allocation) and a table to store the allocations themselves. We
     # initialize both with the first input, as when there is nothing before us
     # we will always allocate the most possible to the single campaign.
-    dp = [C[0]]
-    allocs = [np.arange(M)]
+    dp = [c[0]]
+    allocs = [np.arange(m)]
 
-    for i in range(1, N):
+    for i in range(1, n):
         next_dp_row = []
         next_alloc_row = []
-        for j in range(M):
+        for j in range(m):
             # We reverse the previous row of the dynamic programming storage, to
             # easily compare the options we have by summing across the vectors
             prev_row_r = dp[i - 1][j::-1]
-            curr_row = C[i][: j + 1]
+            curr_row = c[i][: j + 1]
 
             row_sum = prev_row_r + curr_row
 
@@ -69,10 +69,10 @@ def budget_assignment(C):
     # A list of the final allocations that will give the optimal budget
     # utilization
     final_allocs = [last_alloc]
-    remaining_budget = M - 1 - last_alloc
+    remaining_budget = m - 1 - last_alloc
 
     # This will loop backwards through allocs, excluding the last row, so from n - 2 to 0
-    for i in range(N - 2, -1, -1):
+    for i in range(n - 2, -1, -1):
         # Based on the remaining_budget, we take the max of the remaining
         # possible cumulative values that we have in the dynamic programming
         # table
