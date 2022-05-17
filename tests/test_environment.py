@@ -1,11 +1,9 @@
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
-from hypothesis import given, strategies as st, register_random
-from hypothesis.extra.numpy import arrays
+from hypothesis import given, strategies as st
 
 
-from ola2022_project.environment.environment import alpha_function, generate_graph
+from ola2022_project.environment.environment import alpha_function
 
 
 @given(
