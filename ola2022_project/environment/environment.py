@@ -307,6 +307,8 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
     Arguments:
         rng: instance of a generator (default_rng())
 
+        user_class: integer from 1 to 3 representing user's class
+
         primary_product: integer representing the primary product. It goes from
             0 to 4 instead of 1 to 5 (so product-1 is 0 and so on)
 
