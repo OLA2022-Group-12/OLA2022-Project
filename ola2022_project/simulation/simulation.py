@@ -24,7 +24,7 @@ def get_reward_from_interactions(interactions, prices):
     for i in range(len(interactions)):
 
         # Get the class of the user
-        user_class = interactions[i][0]
+        user_class = interactions[i][0] - 1
 
         # Compute how much a customer purchased
         reward = sum([a * b for a, b in zip(interactions[i][1], prices)])
