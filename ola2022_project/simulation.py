@@ -3,8 +3,8 @@ import random
 
 
 def get_reward_from_interactions(interactions, prices):
-
     """Computes the margin made each day, for each of the 3 classes of users.
+
     Arguments:
         interactions: A list of tuples, with a size corresponding to num_customers. Every
         tuple denotes an interaction. tuple[0] is the user's class, which can be
@@ -34,9 +34,9 @@ def get_reward_from_interactions(interactions, prices):
 
 
 def simulation(env, learner, prices, n_experiment=1, n_day=300):
+    """Runs the simulation for a certain amount of experiments consisting of a
+    certain amount of days
 
-    """
-    Computes the simulation,
     Arguments:
         env:
 
