@@ -16,7 +16,7 @@ jobs:
       matrix:
         python-version: ['3.10']  # We could run for multiple python versions, but takes time
         poetry-version: [1.1.13]  # And also multiple poetry versions, but not nessecary
-        os: [ubuntu-18.04, macos-latest, windows-latest]
+        os: [ubuntu-18.04] #, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -31,22 +31,7 @@ jobs:
         run: poetry install
       - name: Run tests
         run: poetry run pytest
-  linting:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.10'
-      - name: Run image
-        uses: abatilo/actions-poetry@v2.0.0
-        with:
-          poetry-version: '1.1.13'
-      - name: Install all dependencies
-        run: poetry install
-      - name: Run python linting
-        run: poetry run flake8
-  format:
+  format_and_linting:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -61,3 +46,5 @@ jobs:
         uses: reviewdog/action-suggester@v1
         with:
           tool_name: blackfmt
+      - name: Lint code with flake8
+        uses: py-actions/flake8@v2
