@@ -35,14 +35,15 @@ def get_reward_from_interactions(interactions, prices):
     return reward_per_class
 
 
-def simulation(rng, env, learner, prices, n_experiment=1, n_day=300):
+def simulation(rng, env, learner_factory, prices, n_experiment=1, n_day=300):
     """Runs the simulation for a certain amount of experiments consisting of a
     certain amount of days
 
     Arguments:
         env:
 
-        learner:
+        learner_factory: A function which creates a new learner (needed to run
+        multiple experiments with "fresh" learners)
 
         prices: Prices of the 5 products. Shape (1,5)
 
@@ -54,22 +55,28 @@ def simulation(rng, env, learner, prices, n_experiment=1, n_day=300):
         n_day: Duration of the experience in days
 
     Returns:
+        The collected rewards of running each experiment
 
     """
 
-    reward_per_experiment = []
+    rewards_per_experiment = []
 
-    for day in tqdm(range(n_day)):
+    for _ in tqdm.trange(n_experiment, desc="experiment"):
+        # Create a new learner for each experiment
+        learner = learner_factory()
 
-        # Every day, there is a random number of potential new customers
-        n_new_customers = rng.integers(0, 100)
+        for _ in tqdm.trange(n_day, desc="day"):
+            # Every day, there is a random number of potential new customers
+            n_new_customers = rng.integers(0, 100)
 
-        budgets = learner.budgets
+            budgets = learner.budgets
 
-        # All the interactions of an entire day, depending on the budget
-        interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
+            # All the interactions of an entire day, depending on the budget
+            interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
 
-        rewards = get_reward_from_interactions(interactions, prices)
-        learner.update(budgets, rewards)
+            rewards = get_reward_from_interactions(interactions, prices)
+            learner.update(budgets, rewards)
 
-    reward_per_experiment.append(learner.collected_reward)
+        rewards_per_experiment.append(learner.collected_reward)
+
+    return rewards_per_experiment
