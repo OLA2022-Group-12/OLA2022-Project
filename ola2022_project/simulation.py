@@ -1,4 +1,3 @@
-import numpy as np
 import tqdm
 import random
 
@@ -47,7 +46,8 @@ def simulation(env, learner, prices, n_experiment=1, n_day=300):
 
         n_experiment: Number of times the experiment is performed,
           to have statistically more accurate results.
-          By default, the value is 1 because in the real world we don't have time to do each experiment several times.
+          By default, the value is 1 because in the real world we don't have
+          time to do each experiment several times.
 
         n_day: Duration of the experience in days
 
