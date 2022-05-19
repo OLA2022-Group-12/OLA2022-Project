@@ -1,7 +1,9 @@
+import enum
 from collections import namedtuple
 import numpy as np
 from numpy.random import default_rng
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from typing import Optional
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -19,6 +21,11 @@ UserClassParameters = namedtuple(
 Interaction = namedtuple("Interaction", ["user_class", "items_bought"])
 
 
+class Step(enum.Enum):
+    ONE = ("classes_parameters",)
+    TWO = ("classes_parameters", "graph")
+
+
 @dataclass
 class EnvironmentData:
 
@@ -31,14 +38,17 @@ class EnvironmentData:
     simply be specified when the class is constructed.
     """
 
+    # The total budget to subdivide
+    total_budget: int
+
     # Probability of every class to show up. They must add up to 1
-    class_ratios: list
+    class_ratios: list[float]
 
     # Price of the 5 products
-    product_prices: list
+    product_prices: list[float]
 
     # List of class parameters for each class, implemented as list of UserClassParameters
-    classes_parameters: list
+    classes_parameters: list[UserClassParameters]
 
     # The competitor budget is assumed to be constant, since the competitor is
     # non-strategic
@@ -57,14 +67,64 @@ class EnvironmentData:
 
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
-    next_products: list
+    next_products: list[tuple[int, int]]
+
+
+@dataclass
+class MaskedEnvironmentData:
+
+    """Dataclass containing environment values which are not masked for the
+    current learning step See EnvironmentData for more information on the
+    different fields."""
+
+    # The total budget to subdivide
+    total_budget: int
+
+    # Price of the 5 products
+    product_prices: list[float]
+
+    # Lambda parameter, which is the probability of osserving the next secondary product
+    # according to the project's assignment
+    lam: float
+
+    # List that constains for every i+1 product the secondary i+1 products that will be shown
+    # in the first and second slot
+    next_products: list[tuple[int, int]]
+
+    # The competitor budget is assumed to be constant, since the competitor is
+    # non-strategic
+    competitor_budget: Optional[int] = None
+
+    # Max number of items a customer can buy of a certain product. The number of
+    # bought items is determined randomly with max_items as upper bound
+    max_items: Optional[int] = None
+
+    # Products graph's matrix. It's a empty matrix, should be initialized with populate_graphs
+    graph: Optional[np.ndarray] = None
+
+    # Probability of every class to show up. They must add up to 1
+    class_ratios: Optional[list[float]] = None
+
+    # List of class parameters for each class, implemented as list of UserClassParameters
+    classes_parameters: Optional[list[UserClassParameters]] = None
+
+
+def create_masked_environment(
+    step: Step, env: EnvironmentData
+) -> MaskedEnvironmentData:
+    filtered_data = asdict(env)
+    for name in step.value:
+        del filtered_data[name]
+
+    return MaskedEnvironmentData(**filtered_data)
 
 
 def example_environment(
     rng=default_rng(),
+    total_budget=300,
     class_ratios=[0.3, 0.6, 0.1],
     product_prices=[10, 15, 25, 18, 5],
-    user_classes=[
+    classes_parameters=[
         UserClassParameters(10, 0.17, 4.5, 50),
         UserClassParameters(20, 0.15, 5, 65),
         UserClassParameters(30, 0.22, 5.3, 100),
@@ -83,11 +143,13 @@ def example_environment(
     Arguments:
         rng: numpy generator (such as default_rng)
 
+        total_budget: The total amount of budget to subdivide
+
         class_ratios: ratios in which every class appears in the population
 
         product_prices: list containing prices for every i+1 product
 
-        user_classes: list containing UserClassParameters for every user class
+        classes_parameters: list containing UserClassParameters for every user class
             we have
 
         competitor_budget: budget the competitor spends in advertising
@@ -117,14 +179,15 @@ def example_environment(
     )
 
     return EnvironmentData(
-        class_ratios,
-        product_prices,
-        user_classes,
-        competitor_budget,
-        lam,
-        max_items,
-        graph,
-        next_products,
+        total_budget=total_budget,
+        class_ratios=class_ratios,
+        product_prices=product_prices,
+        classes_parameters=classes_parameters,
+        competitor_budget=competitor_budget,
+        lam=lam,
+        max_items=max_items,
+        graph=graph,
+        next_products=next_products,
     )
 
 
