@@ -1,8 +1,13 @@
 import tqdm
-from ola2022_project.environment.environment import get_day_of_interactions
+from ola2022_project.environment.environment import (
+    get_day_of_interactions,
+    create_masked_environment,
+    Step,
+    Interaction,
+)
 
 
-def get_reward_from_interactions(interactions, prices):
+def get_reward_from_interactions(interactions: list[Interaction], prices):
     """Computes the margin made each day, for each of the 3 classes of users.
 
     Arguments:
@@ -20,19 +25,17 @@ def get_reward_from_interactions(interactions, prices):
         aggregated).
     """
 
-    reward_per_class = [0, 0, 0, 0]
+    reward = 0
 
-    for interaction in enumerate(interactions):
-
+    for interaction in interactions:
         # Compute how much a customer purchased
-        reward = sum([a * b for a, b in zip(interaction[1], prices)])
+        reward += sum([a * b for a, b in zip(interaction.items_bought, prices)])
 
         # Get the user class and add the rewards. The zeroth place will be the
         # rewards without a specific user class
-        user_class = interaction[0]
-        reward_per_class[user_class] += reward
+        # reward_per_class[interaction.user_class] += reward
 
-    return reward_per_class
+    return reward
 
 
 def simulation(rng, env, learner_factory, prices, n_experiment=1, n_day=300):
@@ -60,23 +63,29 @@ def simulation(rng, env, learner_factory, prices, n_experiment=1, n_day=300):
     """
 
     rewards_per_experiment = []
+    step = Step.ONE
+
+    masked_env = create_masked_environment(step, env)
 
     for _ in tqdm.trange(n_experiment, desc="experiment"):
         # Create a new learner for each experiment
         learner = learner_factory()
 
+        collected_rewards = []
         for _ in tqdm.trange(n_day, desc="day"):
             # Every day, there is a random number of potential new customers
             n_new_customers = rng.integers(0, 100)
 
-            budgets = learner.budgets
+            budgets = learner.predict(masked_env)
 
             # All the interactions of an entire day, depending on the budget
             interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
 
             rewards = get_reward_from_interactions(interactions, prices)
-            learner.update(budgets, rewards)
 
-        rewards_per_experiment.append(learner.collected_reward)
+            collected_rewards.append(rewards)
+            learner.learn(rewards, budgets)
+
+        rewards_per_experiment.append(collected_rewards)
 
     return rewards_per_experiment

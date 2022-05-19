@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from ola2022_project import LoggingConfiguration
 from ola2022_project.environment.environment import example_environment
 from ola2022_project.simulation import simulation as run_simulation
+from ola2022_project.learners.stupid_learner import StupidLearner
 
 logger = logging.getLogger(__name__)
 
@@ -27,19 +28,23 @@ def simulation(n_experiments, n_days):
     )
 
     rng = np.random.default_rng()
-    env = example_environment(rng)
+    env = example_environment(rng=rng)
     rewards_per_experiment = run_simulation(
         rng,
         env,
-        learner_factory=None,  # TODO Add an actual learner here!
+        learner_factory=StupidLearner,
         prices=[10, 10, 10, 10, 10],
         n_experiment=n_experiments,
         n_day=n_days,
     )
+
+    print(rewards_per_experiment)
 
     logger.info("Completed running experiments, plotting rewards...")
 
     _ = plt.figure()
     for i, rewards in enumerate(rewards_per_experiment):
         plt.plot(rewards, label=f"experiment {i}")
+
+    plt.legend()
     plt.show()
