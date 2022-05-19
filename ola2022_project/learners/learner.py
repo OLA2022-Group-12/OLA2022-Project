@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from ola2022_project.environment.environment import MaskedEnvironmentData
+import numpy as np
 
 
 class Learner(ABC):
@@ -9,51 +10,22 @@ class Learner(ABC):
     online feedback returned.
     """
 
-    def __init__(self, total_budget, collected_rewards):
-        self._total_budget = total_budget
-        self._collected_rewards = collected_rewards
-
-    @property
-    def total_budget(self):
-
-        """Overall total budget that the learner should subdivide optimally between
-        products.
-        """
-
-        return self._total_budget
-
-    @total_budget.setter
-    def total_budget(self, value):
-        self._total_budget = value
-
-    @property
-    def collected_rewards(self):
-
-        """Array of values representing all of the rewards collected by the learner
-        during its life
-        """
-
-        return self._collected_rewards
-
-    @collected_rewards.setter
-    def collected_rewards(self, value):
-        self._collected_rewards = value
-
     @abstractmethod
-    def learn(self, reward, prediction):
+    def learn(self, reward: float, prediction: np.ndarray):
 
         """Updates the learner's properties according to the reward received.
 
         Arguments:
-            reward: the reward obtained from the environment, needed for the tuning of
-                internal properties done by the learner
+            reward: the reward obtained from the environment based on the
+            prediction given, needed for the tuning of internal properties done
+            by the learner
             prediction: array containing the previous budget evaluation of the learner
         """
 
         pass
 
     @abstractmethod
-    def predict(self, data: MaskedEnvironmentData):
+    def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
 
         """Makes an inference about the values of the budgets for the subcampaigns
         utilizing the information gathered over time and the current state of the

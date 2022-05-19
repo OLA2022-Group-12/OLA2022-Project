@@ -38,6 +38,9 @@ class EnvironmentData:
     simply be specified when the class is constructed.
     """
 
+    # The total budget to subdivide
+    total_budget: int
+
     # Probability of every class to show up. They must add up to 1
     class_ratios: list[float]
 
@@ -64,7 +67,7 @@ class EnvironmentData:
 
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
-    next_products: list[list[int]]
+    next_products: list[tuple[int, int]]
 
 
 @dataclass
@@ -73,6 +76,9 @@ class MaskedEnvironmentData:
     """Dataclass containing environment values which are not masked for the
     current learning step See EnvironmentData for more information on the
     different fields."""
+
+    # The total budget to subdivide
+    total_budget: int
 
     # Price of the 5 products
     product_prices: list[float]
@@ -83,7 +89,7 @@ class MaskedEnvironmentData:
 
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
-    next_products: list[list[int]]
+    next_products: list[tuple[int, int]]
 
     # The competitor budget is assumed to be constant, since the competitor is
     # non-strategic
@@ -115,9 +121,10 @@ def create_masked_environment(
 
 def example_environment(
     rng=default_rng(),
+    total_budget=300,
     class_ratios=[0.3, 0.6, 0.1],
     product_prices=[10, 15, 25, 18, 5],
-    user_classes=[
+    classes_parameters=[
         UserClassParameters(10, 0.17, 4.5, 50),
         UserClassParameters(20, 0.15, 5, 65),
         UserClassParameters(30, 0.22, 5.3, 100),
@@ -136,11 +143,13 @@ def example_environment(
     Arguments:
         rng: numpy generator (such as default_rng)
 
+        total_budget: The total amount of budget to subdivide
+
         class_ratios: ratios in which every class appears in the population
 
         product_prices: list containing prices for every i+1 product
 
-        user_classes: list containing UserClassParameters for every user class
+        classes_parameters: list containing UserClassParameters for every user class
             we have
 
         competitor_budget: budget the competitor spends in advertising
@@ -170,14 +179,15 @@ def example_environment(
     )
 
     return EnvironmentData(
-        class_ratios,
-        product_prices,
-        user_classes,
-        competitor_budget,
-        lam,
-        max_items,
-        graph,
-        next_products,
+        total_budget=total_budget,
+        class_ratios=class_ratios,
+        product_prices=product_prices,
+        classes_parameters=classes_parameters,
+        competitor_budget=competitor_budget,
+        lam=lam,
+        max_items=max_items,
+        graph=graph,
+        next_products=next_products,
     )
 
 
