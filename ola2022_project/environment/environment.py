@@ -4,10 +4,9 @@ from numpy.random import default_rng
 from dataclasses import dataclass
 
 """The correct use of this module is to construct the class
-Environment_data passing a Generator as argument such as
-foo = Environment_data(rng). After this, get_day_of_interactions
-can be called passing all the required argument included the
-previously declared instance of Environment_data.
+Environment_data by using the function example_environment which returns an
+instance of Environment_data with sample values. The class can also be created
+by itself by specifying all attributes.
 """
 
 
