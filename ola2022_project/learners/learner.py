@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import numpy as np
+from ola2022_project.environment.environment import MaskedEnvironmentData
 
 
 class Learner(ABC):
@@ -39,7 +39,6 @@ class Learner(ABC):
     def collected_rewards(self, value):
         self._collected_rewards = value
 
-    @classmethod
     @abstractmethod
     def learn(self, reward, prediction):
 
@@ -53,9 +52,8 @@ class Learner(ABC):
 
         pass
 
-    @classmethod
     @abstractmethod
-    def predict(self, data):
+    def predict(self, data: MaskedEnvironmentData):
 
         """Makes an inference about the values of the budgets for the subcampaigns
         utilizing the information gathered over time and the current state of the
