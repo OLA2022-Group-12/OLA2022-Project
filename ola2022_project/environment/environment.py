@@ -22,6 +22,7 @@ Interaction = namedtuple("Interaction", ["user_class", "items_bought"])
 
 
 class Step(enum.Enum):
+    ZERO = ()
     ONE = ("classes_parameters",)
     TWO = ("classes_parameters", "graph")
 
