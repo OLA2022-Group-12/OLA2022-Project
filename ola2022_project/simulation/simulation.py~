@@ -5,7 +5,6 @@ from ola2022_project.environment.environment import (
     Step,
     Interaction,
 )
-from typing import List
 
 
 def get_reward_from_interactions(interactions: List[Interaction], prices):
@@ -39,7 +38,7 @@ def get_reward_from_interactions(interactions: List[Interaction], prices):
     return reward
 
 
-def simulation(rng, env, learner_factory, n_experiment=1, n_day=300):
+def simulation(rng, env, learner_factory, prices, n_experiment=1, n_day=300):
     """Runs the simulation for a certain amount of experiments consisting of a
     certain amount of days
 
@@ -82,7 +81,7 @@ def simulation(rng, env, learner_factory, n_experiment=1, n_day=300):
             # All the interactions of an entire day, depending on the budget
             interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
 
-            rewards = get_reward_from_interactions(interactions, env.product_prices)
+            rewards = get_reward_from_interactions(interactions, prices)
 
             collected_rewards.append(rewards)
             learner.learn(rewards, budgets)
