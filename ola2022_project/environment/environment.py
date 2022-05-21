@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 from numpy.random import default_rng
 from dataclasses import dataclass, asdict
-from typing import Optional
+from typing import Optional, List, Tuple
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -42,13 +42,13 @@ class EnvironmentData:
     total_budget: int
 
     # Probability of every class to show up. They must add up to 1
-    class_ratios: list[float]
+    class_ratios: List[float]
 
     # Price of the 5 products
-    product_prices: list[float]
+    product_prices: List[float]
 
     # List of class parameters for each class, implemented as list of UserClassParameters
-    classes_parameters: list[UserClassParameters]
+    classes_parameters: List[UserClassParameters]
 
     # The competitor budget is assumed to be constant, since the competitor is
     # non-strategic
@@ -67,7 +67,7 @@ class EnvironmentData:
 
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
-    next_products: list[tuple[int, int]]
+    next_products: List[Tuple[int, int]]
 
 
 @dataclass
@@ -81,7 +81,7 @@ class MaskedEnvironmentData:
     total_budget: int
 
     # Price of the 5 products
-    product_prices: list[float]
+    product_prices: List[float]
 
     # Lambda parameter, which is the probability of osserving the next secondary product
     # according to the project's assignment
@@ -89,7 +89,7 @@ class MaskedEnvironmentData:
 
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
-    next_products: list[tuple[int, int]]
+    next_products: List[Tuple[int, int]]
 
     # The competitor budget is assumed to be constant, since the competitor is
     # non-strategic
@@ -103,10 +103,10 @@ class MaskedEnvironmentData:
     graph: Optional[np.ndarray] = None
 
     # Probability of every class to show up. They must add up to 1
-    class_ratios: Optional[list[float]] = None
+    class_ratios: Optional[List[float]] = None
 
     # List of class parameters for each class, implemented as list of UserClassParameters
-    classes_parameters: Optional[list[UserClassParameters]] = None
+    classes_parameters: Optional[List[UserClassParameters]] = None
 
 
 def create_masked_environment(

@@ -5,9 +5,10 @@ from ola2022_project.environment.environment import (
     Step,
     Interaction,
 )
+from typing import List
 
 
-def get_reward_from_interactions(interactions: list[Interaction], prices):
+def get_reward_from_interactions(interactions: List[Interaction], prices):
     """Computes the margin made each day, for each of the 3 classes of users.
 
     Arguments:
