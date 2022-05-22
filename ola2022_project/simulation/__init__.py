@@ -1,1 +1,1 @@
-from ola2022_project.environment import environment  # noqa
+from ola2022_project.simulation import simulation  # noqa
