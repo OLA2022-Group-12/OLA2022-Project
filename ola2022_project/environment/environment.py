@@ -392,7 +392,9 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
     ):
 
         # The customer buys a random quantity of the product between 1 and max_tems
-        items_bought[primary_product] += rng.integers(1, env_data.max_items)
+        items_bought[primary_product] += rng.integers(
+            1, env_data.max_items, endpoint=True
+        )
 
         secondary_products = env_data.next_products[primary_product]
 
@@ -400,7 +402,8 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
         # redirected to a new primary product page where the secondary product
         # is the primary product
         if (
-            rng.random() < env_data.graph[primary_product, secondary_products[0]]
+            rng.uniform(low=0.0, high=1.0)
+            < env_data.graph[primary_product, secondary_products[0]]
             and not items_bought[secondary_products[0]]
         ):
             # Items bought on the opened page are added to the ones bought in
@@ -413,7 +416,7 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
         # he gets redirected to a new page where teh clicked product is thge
         # primary_product
         if (
-            rng.random()
+            rng.uniform(low=0.0, high=1.0)
             < env_data.graph[primary_product, secondary_products[1]] * env_data.lam
             and not items_bought[secondary_products[1]]
         ):
