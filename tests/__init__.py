@@ -1,5 +1,5 @@
 import numpy as np
-from ola2022_project.environment.environment import EnvironmentData
+from ola2022_project.environment.environment import EnvironmentData, UserClassParameters
 import hypothesis.strategies as st
 from hypothesis.extra.numpy import arrays
 
@@ -49,19 +49,25 @@ def generated_environment(draw):
     max_product_price = np.max(np.array(product_prices))
     min_product_price = np.min(np.array(product_prices))
 
-    classes_parameters_st = st.tuples(
-        # Reservation price
-        st.integers(min_value=min_product_price, max_value=max_product_price),
-        # Steepness
-        st.floats(min_value=0.1, max_value=0.9),
-        # Shift
-        st.floats(min_value=1.0, max_value=10.0),
-        # Upper bound
-        st.integers(min_value=10, max_value=100),
+    classes_parameters_st = st.lists(
+        st.tuples(
+            # Reservation price
+            st.integers(min_value=min_product_price, max_value=max_product_price),
+            # Steepness
+            st.floats(min_value=0.1, max_value=0.9),
+            # Shift
+            st.floats(min_value=1.0, max_value=10.0),
+            # Upper bound
+            st.integers(min_value=10, max_value=100),
+        ).map(
+            lambda p: UserClassParameters(
+                reservation_price=p[0], steepness=p[1], shift=p[2], upper_bound=p[3]
+            )
+        ),
+        min_size=n_classes,
+        max_size=n_classes,
     )
-    classes_parameters = draw(
-        st.lists(classes_parameters_st, min_size=n_classes, max_size=n_classes)
-    )
+    classes_parameters = draw(classes_parameters_st)
 
     competitor_budget_st = st.integers(min_value=0, max_value=max_budget_size)
     competitor_budget = draw(competitor_budget_st)
