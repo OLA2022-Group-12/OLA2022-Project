@@ -5,7 +5,7 @@ from hypothesis.extra.numpy import arrays
 
 
 @st.composite
-def generated_environment(draw):
+def generated_environment(draw, single_product_price=False):
     """Generates an environment with random data based on some assumtions"""
 
     max_budget_size = 1000
@@ -40,12 +40,18 @@ def generated_environment(draw):
     n_products_st = st.integers(min_value=min_products, max_value=max_products)
     n_products = draw(n_products_st)
 
-    product_prices_st = st.lists(
-        st.integers(min_value=1, max_value=max_product_price),
-        min_size=n_products,
-        max_size=n_products,
-    )
-    product_prices = draw(product_prices_st)
+    if single_product_price:
+        product_price_st = st.integers(min_value=1, max_value=max_product_price)
+        product_price = draw(product_price_st)
+        product_prices = [product_price for _ in range(n_products)]
+    else:
+        product_prices_st = st.lists(
+            st.integers(min_value=1, max_value=max_product_price),
+            min_size=n_products,
+            max_size=n_products,
+        )
+        product_prices = draw(product_prices_st)
+
     max_product_price = np.max(np.array(product_prices))
     min_product_price = np.min(np.array(product_prices))
 
@@ -54,9 +60,9 @@ def generated_environment(draw):
             # Reservation price
             st.integers(min_value=min_product_price, max_value=max_product_price),
             # Steepness
-            st.floats(min_value=0.1, max_value=0.9),
+            st.floats(min_value=0.3, max_value=0.9),
             # Shift
-            st.floats(min_value=1.0, max_value=10.0),
+            st.floats(min_value=2.0, max_value=10.0),
             # Upper bound
             st.integers(min_value=10, max_value=100),
         ).map(
@@ -69,7 +75,7 @@ def generated_environment(draw):
     )
     classes_parameters = draw(classes_parameters_st)
 
-    competitor_budget_st = st.integers(min_value=0, max_value=max_budget_size)
+    competitor_budget_st = st.integers(min_value=1, max_value=max_budget_size)
     competitor_budget = draw(competitor_budget_st)
 
     lambda_st = st.floats(min_value=0.1, max_value=0.9)

@@ -1,4 +1,5 @@
 import enum
+from typing import List
 from collections import namedtuple
 import numpy as np
 from numpy.random import default_rng
@@ -6,9 +7,10 @@ from dataclasses import dataclass, asdict
 from typing import Optional
 
 """The correct use of this module is to construct the class
-Environment_data by using the function example_environment which returns an
-instance of Environment_data with sample values. The class can also be created
-by itself by specifying all attributes.
+EnvironmentData by using the function example_environment which returns an
+instance of EnvironmentData with sample values. The class can also be created
+by itself by specifying all attributes. Then the `get_day_of_interactions`
+function should be called to generate interactions.
 """
 
 
@@ -215,7 +217,9 @@ def alpha_function(budget, steepness, shift, upper_bound):
     return upper_bound * (1 / (1 + np.exp(-steepness * budget + shift)))
 
 
-def generate_graph(rng, size, fully_connected, zeros_probability):
+def generate_graph(
+    rng: np.random.Generator, size: int, fully_connected: bool, zeros_probability: float
+):
 
     """This function generates by default a incidence matrix of a graph
 
@@ -243,8 +247,10 @@ def generate_graph(rng, size, fully_connected, zeros_probability):
     # Removes some connections if graph is requested to be not fully-connected
     if not fully_connected:
         mask = rng.choice(
-            [True, False], (size, size), p=[zeros_probability, 1 - zeros_probability]
-        )
+            [True, False],
+            size=(size, size),
+            p=[zeros_probability, 1 - zeros_probability],
+        )  # type: ignore
         graph[mask] = 0
 
     # Removes auto-loops from graph
@@ -253,41 +259,12 @@ def generate_graph(rng, size, fully_connected, zeros_probability):
     return graph
 
 
-def _get_interaction(rng, user_class, primary_product, env_data):
-
-    """Computes a single interaction and returns it.
-
-    This method shouldn't be called on its own, but only via the
-    get_day_of_interactions() method
-
-    Arguments:
-        rng: instance of a generator (default_rng())
-
-        user_class: integer from 1 to 3 representing user's class
-
-        primary_product: integer from 0 to 5 representing product number.
-            Note: product 0 is the competitor's
-
-        env_data: instance of Environment_data
-
-    Returns:
-        A named tuple Interaction, where the field user_class is an integer (1,
-        2 or 3) representing the user class, and the field items_bought is a
-        numpy array of 5 elements, where every element i is an integer
-        indicating the quantity bought of the product i+1
-    """
-
-    # This array is initialized with zeros and represents the quantity of bought
-    # items for every product in a page
-    items_bought = np.zeros(5, dtype=np.int8)
-
-    # The user goes to the page of the primary_product
-    items_bought = _go_to_page(rng, user_class, primary_product, items_bought, env_data)
-
-    return user_class, items_bought
-
-
-def get_day_of_interactions(rng, num_customers, budgets, env_data):
+def get_day_of_interactions(
+    rng: np.random.Generator,
+    num_customers: int,
+    budgets: np.ndarray,
+    env_data: EnvironmentData,
+) -> List[Interaction]:
 
     """Main method to be called when interacting with the environment. Outputs
     all the interactions of an entire day. When called generates new alphas from
@@ -305,122 +282,121 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
         env_data: instance of Environment_data
 
     Returns:
-        A list of tuples, with a size corresponding to num_customers. Every
-        tuple denotes an interaction. tuple[0] is the user's class, which can be
-        1, 2 or 3. tuple[1] is a numpy array of 5 elemets, where every element i
-        represents how many of the products i+1 the customer bought
+        A list of interactions generated based on the given arguments
     """
+    n_classes = 3
+    n_products = 5
 
-    # Competitor budget is added to the array of budgets
-    budgets = np.insert(budgets, 0, env_data.competitor_budget)
+    # We will traverse the graph AT MOST n_products times per customer, as we
+    # cannot buy a product multiple times, hence it is enough to generate
+    # n_products uniform variables for each customer to calculate the next
+    # product probability.
+    next_product_probabilities = rng.uniform(
+        low=0.0, high=1.0, size=(num_customers, n_products)
+    )
 
-    # Computing total number of customers for each class based on class_ratios
-    customers_of_class_1 = int(num_customers * env_data.class_ratios[0])
-    customers_of_class_2 = int(num_customers * env_data.class_ratios[1])
-    customers_of_class_3 = num_customers - customers_of_class_1 - customers_of_class_2
-    customers_per_class = [
-        customers_of_class_1,
-        customers_of_class_2,
-        customers_of_class_3,
-    ]
+    # IF we decide to buy product i for customer j, we will buy this amount of
+    # it
+    items_of_product = rng.integers(
+        1, env_data.max_items, endpoint=True, size=(num_customers, n_products)
+    )
 
-    total_interactions = list()
+    # Competitor budget is added to the array of budgets at the end
+    budgets = np.append(budgets, env_data.competitor_budget)
 
-    # For every class, product ratios are computed
-    for i in range(3):
-        click_ratios = alpha_function(
-            budgets,
-            env_data.classes_parameters[i].steepness,
-            env_data.classes_parameters[i].shift,
-            env_data.classes_parameters[i].upper_bound,
-        )
-        alpha_ratios = rng.dirichlet(click_ratios)
-
-        # This array will contain how many customers will land on a certain
-        # product page, excluding the competitor page, which corresponds to the
-        # first ratio
-        product_ratios = [
-            int(alpha_ratios[1] * customers_per_class[i]),
-            int(alpha_ratios[2] * customers_per_class[i]),
-            int(alpha_ratios[3] * customers_per_class[i]),
-            int(alpha_ratios[4] * customers_per_class[i]),
-            int(alpha_ratios[5] * customers_per_class[i]),
+    # The ratios of users assigned to each class given the parameters of the
+    # classes function
+    alpha_ratios = np.array(
+        [
+            rng.dirichlet(
+                alpha_function(
+                    budgets,
+                    class_params.steepness,
+                    class_params.shift,
+                    class_params.upper_bound,
+                )
+            )
+            for class_params in env_data.classes_parameters
         ]
+    )
 
-        # According to product ratios, for every product the computed number on
-        # users are landed on the right and the interaction starts
-        for product, ratio in enumerate(product_ratios):
-            for interaction in range(ratio):
-                user_class, items = _get_interaction(rng, i, product, env_data)
-                total_interactions.append(Interaction(user_class, items))
+    # By multipling the matrix of the alpha_ratios and the class ratios, we get
+    # a matrix which combines both probability distributions. This means that
+    # the total sum of the entire matrix is still 1, and by "flattening" it we
+    # can use it directly into the rng.choice call as the uneven probability
+    # distribution. The benefit is that rng.choice is probably better at
+    # choosing evenly that any rounding we would do manually.
+    product_and_class_probabilities = (
+        alpha_ratios.T * np.array(env_data.class_ratios)
+    ).T
 
-    # Shuffle the list to make data more realistic
-    rng.shuffle(total_interactions)
-    return total_interactions
+    # This is just the possibilities that can be chosen, which is a direct
+    # mapping of the probability distribution above
+    product_and_class_possible_choices = np.mgrid[: n_products + 1, :n_classes].T
+    product_and_class_choices = rng.choice(
+        product_and_class_possible_choices.reshape(-1, 2),
+        p=product_and_class_probabilities.reshape(-1),
+        size=num_customers,
+    )
 
-
-def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
-
-    """Shows the user a page of the specified primary products.
-
-    After buying the primary product two secondary products are shown. Clicking
-    on them shows the user another page where the clicked product is primary.
-
-    Arguments:
-        rng: instance of a generator (default_rng())
-
-        user_class: integer from 1 to 3 representing user's class
-
-        primary_product: integer representing the primary product. It goes from
-            0 to 4 instead of 1 to 5 (so product-1 is 0 and so on)
-
-        items_bought: numpy array of integers where every element i represents
-            the quantity bought of the product i+1
-
-        env_data: instance of Environment_data
-
-    Returns:
-        numpy array of integers where every element i represents
-            the quantity bought of the product i+1
-    """
-
-    # Checks if the price of the primary product is under the reservation price of the user class
-    if (
-        env_data.product_prices[primary_product]
-        < env_data.classes_parameters[user_class].reservation_price
+    total_interactions = []
+    for (
+        product_and_class,
+        items_of_product_for_interaction,
+        next_product_probabilities_for_interaction,
+    ) in zip(
+        product_and_class_choices,
+        items_of_product,
+        next_product_probabilities,
     ):
+        main_product = product_and_class[0]
+        user_class = product_and_class[1]
 
-        # The customer buys a random quantity of the product between 1 and max_tems
-        items_bought[primary_product] += rng.integers(
-            1, env_data.max_items, endpoint=True
-        )
+        # Competitor, so does not generate a Interaction
+        if main_product == n_products:
+            continue
 
-        secondary_products = env_data.next_products[primary_product]
+        # Simple BFS through the graph, which only continues if we actually buy
+        # elements at the found product
+        bought_products = set()
+        pages = [(main_product, env_data.next_products[main_product])]
+        while len(pages) > 0:
+            product, slots = pages.pop()
 
-        # If the user watches the first slot and clicks on the product he gets
-        # redirected to a new primary product page where the secondary product
-        # is the primary product
-        if (
-            rng.uniform(low=0.0, high=1.0)
-            < env_data.graph[primary_product, secondary_products[0]]
-            and not items_bought[secondary_products[0]]
-        ):
-            # Items bought on the opened page are added to the ones bought in
-            # the current page
-            items_bought = _go_to_page(
-                rng, user_class, secondary_products[0], items_bought, env_data
-            )
+            if (
+                env_data.product_prices[product]
+                > env_data.classes_parameters[user_class].reservation_price
+            ):
+                # We pass this product as the price is too high, don't look at
+                # neither slots, but there might be more pages left to look at.
+                continue
 
-        # Same as before, if the user watches the second slot and clicks on it
-        # he gets redirected to a new page where teh clicked product is thge
-        # primary_product
-        if (
-            rng.uniform(low=0.0, high=1.0)
-            < env_data.graph[primary_product, secondary_products[1]] * env_data.lam
-            and not items_bought[secondary_products[1]]
-        ):
-            items_bought = _go_to_page(
-                rng, user_class, secondary_products[1], items_bought, env_data
-            )
+            # We buy the current product as the customer can afford it
+            bought_products.add(product)
 
-    return items_bought
+            for i, product_in_slot in enumerate(slots):
+                if product_in_slot in bought_products:
+                    # We already bought the product in this slot
+                    continue
+
+                if (
+                    next_product_probabilities_for_interaction[product_in_slot]
+                    < env_data.graph[product, product_in_slot] * (env_data.lam**i)
+                    and product_in_slot not in bought_products
+                ):
+                    # We chose the product in slot i, so we have to add it's
+                    # "page" to the pages we need to check
+                    pages.append(
+                        (product_in_slot, env_data.next_products[product_in_slot])
+                    )
+
+        if len(bought_products) == 0:
+            continue
+
+        items_bought = np.zeros_like(items_of_product_for_interaction)
+        for product in bought_products:
+            items_bought[product] = items_of_product_for_interaction[product]
+
+        total_interactions.append(Interaction(user_class, items_bought))
+
+    return total_interactions
