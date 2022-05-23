@@ -22,6 +22,7 @@ Interaction = namedtuple("Interaction", ["user_class", "items_bought"])
 
 
 class Step(enum.Enum):
+    ZERO = ()
     ONE = ("classes_parameters",)
     TWO = ("classes_parameters", "graph")
 
@@ -125,9 +126,9 @@ def example_environment(
     class_ratios=[0.3, 0.6, 0.1],
     product_prices=[10, 15, 25, 18, 5],
     classes_parameters=[
-        UserClassParameters(10, 0.17, 4.5, 50),
-        UserClassParameters(20, 0.15, 5, 65),
-        UserClassParameters(30, 0.22, 5.3, 100),
+        UserClassParameters(10, 0.11, 1, 100),
+        UserClassParameters(20, 0.06, 0.4, 65),
+        UserClassParameters(30, 0.07, 0.5, 150),
     ],
     competitor_budget=100,
     lam=0.5,
@@ -212,7 +213,7 @@ def alpha_function(budget, steepness, shift, upper_bound):
         certain class function
     """
 
-    return upper_bound * (1 / (1 + np.exp(-steepness * budget + shift)))
+    return max(0, upper_bound * (1 - np.exp(-steepness * budget + shift)))
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
@@ -391,7 +392,9 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
     ):
 
         # The customer buys a random quantity of the product between 1 and max_tems
-        items_bought[primary_product] += rng.integers(1, env_data.max_items)
+        items_bought[primary_product] += rng.integers(
+            1, env_data.max_items, endpoint=True
+        )
 
         secondary_products = env_data.next_products[primary_product]
 
@@ -399,7 +402,8 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
         # redirected to a new primary product page where the secondary product
         # is the primary product
         if (
-            rng.random() < env_data.graph[primary_product, secondary_products[0]]
+            rng.uniform(low=0.0, high=1.0)
+            < env_data.graph[primary_product, secondary_products[0]]
             and not items_bought[secondary_products[0]]
         ):
             # Items bought on the opened page are added to the ones bought in
@@ -412,7 +416,7 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
         # he gets redirected to a new page where teh clicked product is thge
         # primary_product
         if (
-            rng.random()
+            rng.uniform(low=0.0, high=1.0)
             < env_data.graph[primary_product, secondary_products[1]] * env_data.lam
             and not items_bought[secondary_products[1]]
         ):
