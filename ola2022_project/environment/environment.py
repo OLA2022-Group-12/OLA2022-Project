@@ -213,7 +213,9 @@ def alpha_function(budget, steepness, shift, upper_bound):
         certain class function
     """
 
-    return max(0, upper_bound * (1 - np.exp(-steepness * budget + shift)))
+    return np.maximum(
+        0.0000001, upper_bound * (1 - np.exp(-steepness * budget + shift))
+    )
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
