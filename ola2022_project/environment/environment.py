@@ -1,5 +1,4 @@
 import enum
-from typing import List
 from collections import namedtuple
 import numpy as np
 from numpy.random import default_rng
@@ -264,7 +263,7 @@ def get_day_of_interactions(
     num_customers: int,
     budgets: np.ndarray,
     env_data: EnvironmentData,
-) -> List[Interaction]:
+) -> list[Interaction]:
 
     """Main method to be called when interacting with the environment. Outputs
     all the interactions of an entire day. When called generates new alphas from
