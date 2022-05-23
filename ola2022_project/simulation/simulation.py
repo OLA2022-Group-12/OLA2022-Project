@@ -39,7 +39,7 @@ def get_reward_from_interactions(interactions: List[Interaction], prices):
     return reward
 
 
-def simulation(rng, env, learner_factory, n_experiment=1, n_day=300):
+def simulation(rng, env, learner_factory, n_experiment=1, n_day=300, step=Step.ZERO):
     """Runs the simulation for a certain amount of experiments consisting of a
     certain amount of days
 
@@ -56,7 +56,11 @@ def simulation(rng, env, learner_factory, n_experiment=1, n_day=300):
           By default, the value is 1 because in the real world we don't have
           time to do each experiment several times.
 
-        n_day: Duration of the experience in days
+        n_day: Duration of the experiment in days
+
+        step: Step number of the simulation, related to the various steps
+          requested by the project specification and corresponding to which
+          properties of the environment are masked to the learner
 
     Returns:
         The collected rewards of running each experiment
@@ -64,7 +68,6 @@ def simulation(rng, env, learner_factory, n_experiment=1, n_day=300):
     """
 
     rewards_per_experiment = []
-    step = Step.ONE
 
     masked_env = create_masked_environment(step, env)
 
