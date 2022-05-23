@@ -125,9 +125,9 @@ def example_environment(
     class_ratios=[0.3, 0.6, 0.1],
     product_prices=[10, 15, 25, 18, 5],
     classes_parameters=[
-        UserClassParameters(10, 0.17, 4.5, 50),
-        UserClassParameters(20, 0.15, 5, 65),
-        UserClassParameters(30, 0.22, 5.3, 100),
+        UserClassParameters(10, 0.11, 1, 100),
+        UserClassParameters(20, 0.06, 0.4, 65),
+        UserClassParameters(30, 0.07, 0.5, 150),
     ],
     competitor_budget=100,
     lam=0.5,
@@ -212,7 +212,7 @@ def alpha_function(budget, steepness, shift, upper_bound):
         certain class function
     """
 
-    return upper_bound * (1 / (1 + np.exp(-steepness * budget + shift)))
+    return max(0, upper_bound * (1 - np.exp(-steepness * budget + shift)))
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
