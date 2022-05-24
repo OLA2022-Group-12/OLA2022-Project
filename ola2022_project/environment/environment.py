@@ -213,9 +213,7 @@ def alpha_function(budget, steepness, shift, upper_bound):
         certain class function
     """
 
-    return np.maximum(
-        0.0000001, upper_bound * (1 - np.exp(-steepness * budget + shift))
-    )
+    return np.maximum(0, upper_bound * (1 - np.exp(-steepness * budget + shift)))
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
@@ -337,6 +335,11 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
             env_data.classes_parameters[i].shift,
             env_data.classes_parameters[i].upper_bound,
         )
+
+        # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
+        # compatibility with the Dirichlet function
+        click_ratios = np.where(click_ratios == 0, 1e-16, click_ratios)
+
         alpha_ratios = rng.dirichlet(click_ratios)
 
         # This array will contain how many customers will land on a certain
