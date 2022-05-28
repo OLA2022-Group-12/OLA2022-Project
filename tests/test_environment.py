@@ -9,8 +9,10 @@ from ola2022_project.environment.environment import alpha_function
 @given(
     budget=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0),
     steepness=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0),
-    shift=st.floats(allow_nan=False, allow_infinity=False, max_value=100.0),
-    upper_bound=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0),
+    shift=st.floats(allow_nan=False, allow_infinity=False),
+    upper_bound=st.floats(
+        allow_nan=False, allow_infinity=False, min_value=0.0, exclude_min=True
+    ),
 )
 @pytest.mark.filterwarnings("ignore:overflow encountered")
 def test_alpha_function_always_between_zero_and_upper_bound(
@@ -25,8 +27,10 @@ def test_alpha_function_always_between_zero_and_upper_bound(
     x_n=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0),
     x_m=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0),
     steepness=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0),
-    shift=st.floats(allow_nan=False, allow_infinity=False, max_value=100.0),
-    upper_bound=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0),
+    shift=st.floats(allow_nan=False, allow_infinity=False),
+    upper_bound=st.floats(
+        allow_nan=False, allow_infinity=False, min_value=0.0, exclude_min=True
+    ),
 )
 @pytest.mark.filterwarnings("ignore:overflow encountered")
 def test_alpha_function_is_increasing(x_n, x_m, steepness, shift, upper_bound):
