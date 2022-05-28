@@ -51,10 +51,13 @@ class ClairvoyantLearner(Learner):
         class_budget_alphas = np.array(
             [
                 [
-                    alpha_function(budget, steepness, shift, upper_bound)
-                    for budget in budget_steps
+                    [
+                        alpha_function(budget, steepness, shift, upper_bound)
+                        for budget in budget_steps
+                    ]
+                    for (_, steepness, shift, upper_bound) in user_class
                 ]
-                for (_, steepness, shift, upper_bound) in data.classes_parameters
+                for user_class in data.classes_parameters
             ]
         )
 
@@ -64,7 +67,8 @@ class ClairvoyantLearner(Learner):
             class_budget_alphas=class_budget_alphas,
             class_ratios=data.class_ratios,
             class_reservation_prices=[
-                float(p.reservation_price) for p in data.classes_parameters
+                [float(p.reservation_price) for p in user_class]
+                for user_class in data.classes_parameters
             ],
         )
 
