@@ -20,7 +20,6 @@ class BaseMAB:
         self.collected_rewards = np.array([])
 
     def update_observations(self, pulled_arm, reward):
-        print(len(self.rewards_per_arm), pulled_arm)
         self.rewards_per_arm[pulled_arm].append(reward)
         self.collected_rewards = np.append(self.collected_rewards, reward)
 
