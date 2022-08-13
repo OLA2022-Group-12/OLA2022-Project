@@ -75,13 +75,8 @@ class GPTSLearner(BaseMAB):
         self.update_observations(pulled_arm, reward)
         self.update_model()
 
-    def pull_arm(self):
-        sampled_values = self.rng.normal(self.means, self.sigmas)
-        return np.argmax(sampled_values)
-
-    # TODO use normal distributions instead of mean
     def estimation(self):
-        return self.gp.predict(np.atleast_2d(self.arms).T)
+        return self.rng.normal(self.means, self.sigmas)
 
 
 class Mab(enum.Enum):
