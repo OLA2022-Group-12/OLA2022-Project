@@ -3,8 +3,6 @@ import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as Ck
 
-# TODO add scikit learn to poetry
-
 
 class BaseMAB:
 
@@ -19,7 +17,7 @@ class BaseMAB:
         self.rewards_per_arm = [[] for _ in range(n_arms)]
         self.collected_rewards = np.array([])
 
-    def update_observations(self, pulled_arm, reward):
+    def _update_observations(self, pulled_arm, reward):
         self.rewards_per_arm[pulled_arm].append(reward)
         self.collected_rewards = np.append(self.collected_rewards, reward)
 
@@ -56,11 +54,11 @@ class GPTSLearner(BaseMAB):
             kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=2
         )
 
-    def update_observations(self, arm_idx, reward):
-        super().update_observations(arm_idx, reward)
+    def _update_observations(self, arm_idx, reward):
+        super()._update_observations(arm_idx, reward)
         self.pulled_arms.append(self.arms[arm_idx])
 
-    def update_model(self):
+    def _update_model(self):
         x = np.atleast_2d(self.pulled_arms).T
         y = self.collected_rewards
         self.gp.fit(x, y)
@@ -70,11 +68,30 @@ class GPTSLearner(BaseMAB):
         self.sigmas = np.maximum(self.sigmas, 1e-2)
 
     def update(self, pulled_arm, reward):
+
+        """This function must be called when a reward is observed after an arm
+        is pulled. It updates the multi armed bandit's internal estimation using
+        the new collected value.
+
+        Arguments:
+            pulled_arm: the index in the buget steps array of the previously
+                pulled arm (not the value itself)
+
+            reward: the reward observed after pulling the arm of the previous
+                argument
+        """
+
         self.t += 1
-        self.update_observations(pulled_arm, reward)
-        self.update_model()
+        self._update_observations(pulled_arm, reward)
+        self._update_model()
 
     def estimation(self):
+
+        """Returns an estimation of the reward for every budget step.
+
+        Returns: a numpy array with n_budget_steps elements containing the
+        estimated reward for every step
+        """
         return self.rng.normal(self.means, self.sigmas)
 
 
