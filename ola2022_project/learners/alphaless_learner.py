@@ -1,14 +1,40 @@
 import numpy as np
 from ola2022_project.environment.environment import MaskedEnvironmentData
 from ola2022_project.learners import Learner
-from ola2022_project.learners.MAB_algorithms import GPTSLearner, Mab
+from ola2022_project.algorithms.multi_armed_bandits import GPTSLearner, Mab
 from ola2022_project.optimization import budget_assignment
 
 
 class AlphalessLearner(Learner):
+
+    """This class implements an instance of the learner with uknown alpha functions. The
+    Learner will receive aggregated data so it must work by estimating aggregates alpha
+    functions.
+    """
+
     def __init__(
         self, rng, n_budget_steps, data: MaskedEnvironmentData, mab_algorithm=Mab.GPTS
     ) -> None:
+
+        """Creates a learner which works on uknown alpha functions.
+
+        Arguments:
+            rng: numpy generator (such as default_rng)
+
+            n_budget_steps: total number of individual buget steps
+
+            data: instance of a MaskedEnvironmentData initialized with Step.ONE
+
+            mab_algorithm: specifices whether the learner should be implemented
+                with a Gaussian Process Thompson Sampling or Gaussian Process
+                UCB1
+
+        Returns:
+            An AlphalessLearner instance, which adopts the same framework as the
+            parent class Learner
+
+        """
+
         if (
             data.classes_parameters is not None
             or data.graph is None
@@ -24,6 +50,9 @@ class AlphalessLearner(Learner):
         self.total_budget = data.total_budget
 
         normalized_budget_steps = self.budget_steps / data.total_budget
+
+        # According to the specified algorithm the functions creates 5 GP
+        # learners, one for each product
 
         if mab_algorithm == Mab.GPTS:
             self.product_mabs = [
