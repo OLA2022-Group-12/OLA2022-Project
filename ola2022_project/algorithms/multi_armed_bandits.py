@@ -25,7 +25,7 @@ class BaseMAB:
 class GPTSLearner(BaseMAB):
 
     """Implementation of the Gaussian Process Tomphson Sampling algorithm. Used
-    mainly to fit and estimate a function using a gaussian process and a normal
+    mainly to fit and estimate a function using a gaussian process and normal
     distributions
     """
 
