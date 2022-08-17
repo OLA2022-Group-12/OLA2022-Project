@@ -7,8 +7,8 @@ from ola2022_project.optimization import budget_assignment
 
 class AlphalessLearner(Learner):
 
-    """This class implements an instance of the learner with uknown alpha functions. The
-    Learner will receive aggregated data so it must work by estimating aggregates alpha
+    """This class implements an instance of the learner with unknown alpha functions. The
+    Learner will receive aggregated data so it must work by estimating aggregated alpha
     functions.
     """
 
@@ -21,7 +21,7 @@ class AlphalessLearner(Learner):
         Arguments:
             rng: numpy generator (such as default_rng)
 
-            n_budget_steps: total number of individual buget steps
+            n_budget_steps: total number of individual budget steps
 
             data: instance of a MaskedEnvironmentData initialized with Step.ONE
 
