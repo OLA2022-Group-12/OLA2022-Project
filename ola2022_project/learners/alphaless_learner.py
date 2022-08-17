@@ -16,7 +16,7 @@ class AlphalessLearner(Learner):
         self, rng, n_budget_steps, data: MaskedEnvironmentData, mab_algorithm=Mab.GPTS
     ) -> None:
 
-        """Creates a learner which works on uknown alpha functions.
+        """Creates a learner which works on unknown alpha functions.
 
         Arguments:
             rng: numpy generator (such as default_rng)
