@@ -74,8 +74,8 @@ class GPTSLearner(BaseMAB):
         the new collected value.
 
         Arguments:
-            pulled_arm: the index in the buget steps array of the previously
-                pulled arm (not the value itself)
+            pulled_arm: the index of the previously pulled arm (not the value itself)
+                in the budget steps array
 
             reward: the reward observed after pulling the arm of the previous
                 argument
