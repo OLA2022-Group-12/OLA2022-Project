@@ -7,8 +7,9 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as Ck
 class BaseMAB:
 
     """Base Multi-Armed Bandit class that will be implemented by the actual
-    bandit algorithms. It avoids very little repetition, but it's probably more
-    clear for anyone that followed the course's exercise sessions
+    bandit algorithms. It doesn't really help avoiding much code repetition, so
+    it's a bit useless, but it is probably more clear for anyone that followed
+    the course's exercise sessions
     """
 
     def __init__(self, n_arms):
