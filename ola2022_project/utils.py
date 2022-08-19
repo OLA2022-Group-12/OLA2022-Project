@@ -36,12 +36,13 @@ def calculate_aggregated_budget_value(
     Arguments:
         product_graph_landing_values: A list of the value of landing on a certain product
         product_prices: A list of the product prices
-        class_budget_alphas: A (CxM) matrix of the estimated value alphas of a
-        given class for the given budget steps (C is class and M is budget
-        steps)
+        class_budget_alphas: A (CxPxM) matrix of the estimated value alphas of a
+        given class for the given product and budget steps (C is class, P is products
+        and M is budget steps)
         class_ratios: A list of the class ratios
         class_reservation_prices: A optional list of the known reservation
-        prices for class i + 1. If not known, will assume there is no limit
+        prices for class i + 1. If not known, will assume there is no limit.
+        It's a (CxP) matrix where C is the classes and P the products
 
     Returns:
         An (PxM) matrix which has the aggregated budget values across the given
@@ -49,11 +50,31 @@ def calculate_aggregated_budget_value(
         steps.
     """
     n_products = len(product_prices)
-    n_budget_steps = np.shape(class_budget_alphas)[1]
+    n_budget_steps = np.shape(class_budget_alphas)[2]
 
     # The aggregated budget value matrix which denotes the value of
     # assigning j (column) of the budget to product i (row)
     aggregated_budget_value = np.zeros((n_products, n_budget_steps))
+
+    # Converting to numpy array for easier operations
+    class_reservation_prices = np.array(class_reservation_prices)
+    class_budget_alphas = np.array(class_budget_alphas)
+
+    # This condition checks if the number of products in
+    # class_reservation_prices and class_budget_alphas is greater than the
+    # actual number of products. If so, it means that these two arrays include
+    # also the product of the competitor, in position 0. We remove that.
+    if (
+        class_reservation_prices.shape[1] > n_products
+        and class_budget_alphas.shape[1] > n_products
+    ):
+        class_reservation_prices = class_reservation_prices[:, 1:]
+        class_budget_alphas = class_budget_alphas[:, 1:, :]
+
+    if class_reservation_prices is None:
+        class_reservation_prices = [
+            [None for _ in range(n_products)] for _ in class_ratios
+        ]
 
     for user_class, (
         class_ratio,
@@ -63,7 +84,7 @@ def calculate_aggregated_budget_value(
         zip(
             class_ratios,
             class_budget_alphas,
-            class_reservation_prices or [None for _ in class_ratios],
+            class_reservation_prices,
         )
     ):
         logger.debug(
@@ -72,9 +93,11 @@ def calculate_aggregated_budget_value(
 
         budget_value_for_class = np.array(
             [
-                product_price * product_graph_landing_value * budget_alphas_for_class
-                for product_price, product_graph_landing_value in zip(
-                    product_prices, product_graph_landing_values
+                product_price * product_graph_landing_value * budget_alpha
+                for product_price, product_graph_landing_value, budget_alpha in zip(
+                    product_prices,
+                    product_graph_landing_values,
+                    budget_alphas_for_class,
                 )
             ]
         )
@@ -84,7 +107,7 @@ def calculate_aggregated_budget_value(
         # user group will NEVER buy the product)
         if class_reservation_price is not None:
             for i, product_price in enumerate(product_prices):
-                if product_price > class_reservation_price:
+                if product_price > class_reservation_price[i]:
                     budget_value_for_class[i, :] = 0.0
 
         logger.debug(
