@@ -6,9 +6,10 @@ from ola2022_project.environment.environment import (
     Interaction,
 )
 from typing import List
+import numpy as np
 
 
-def get_reward_from_interactions(interactions: List[Interaction], prices):
+def _get_aggregated_reward_from_interactions(interactions: List[Interaction], prices):
     """Computes the margin made each day, for each of the 3 classes of users.
 
     Arguments:
@@ -26,20 +27,31 @@ def get_reward_from_interactions(interactions: List[Interaction], prices):
         aggregated).
     """
 
-    reward = 0
+    # Creates a list contaninig only the number of units every customer bought
+    # for each product
+    units_sold = [i.items_bought for i in interactions]
 
-    for interaction in interactions:
-        # Compute how much a customer purchased
-        reward += sum([a * b for a, b in zip(interaction.items_bought, prices)])
+    # First with np.sum() we compute a single array containing how many units we
+    # sold for every product. Then the units are multiplied element-wise by the
+    # price of the corresponding product
+    reward_per_product = np.sum(units_sold, axis=0) * prices
 
-        # Get the user class and add the rewards. The zeroth place will be the
-        # rewards without a specific user class
-        # reward_per_class[interaction.user_class] += reward
-
-    return reward
+    # The profit of all the products are summed
+    return np.sum(reward_per_product)
 
 
-def simulation(rng, env, learner_factory, n_experiment=1, n_day=300, step=Step.ZERO):
+def simulation(
+    rng,
+    env,
+    learner_factory,
+    n_customers_mean=100,
+    n_customers_variance=10,
+    n_experiment=1,
+    n_days=100,
+    n_budget_steps=5,
+    step=Step.ZERO,
+):
+
     """Runs the simulation for a certain amount of experiments consisting of a
     certain amount of days
 
@@ -49,12 +61,16 @@ def simulation(rng, env, learner_factory, n_experiment=1, n_day=300, step=Step.Z
         learner_factory: A function which creates a new learner (needed to run
         multiple experiments with "fresh" learners)
 
-        prices: Prices of the 5 products. Shape (1,5)
+        n_customers_mean: expected value of the number of new potential
+            customers every day
+
+        n_customers_variance: variance of the daily number of potential
+        customers
 
         n_experiment: Number of times the experiment is performed,
-          to have statistically more accurate results.
-          By default, the value is 1 because in the real world we don't have
-          time to do each experiment several times.
+          to have statistically more accurate results. By default, the value is
+          1 because in the real world we don't have time to do each experiment
+          several times.
 
         n_day: Duration of the experiment in days
 
@@ -72,20 +88,29 @@ def simulation(rng, env, learner_factory, n_experiment=1, n_day=300, step=Step.Z
     masked_env = create_masked_environment(step, env)
 
     for _ in tqdm.trange(n_experiment, desc="experiment"):
-        # Create a new learner for each experiment
-        learner = learner_factory()
+
+        if step == Step.ZERO:
+            # Creation of clairovyant learner
+            learner = learner_factory(n_budget_steps)
+
+        elif step == Step.ONE:
+            # Creation of alphaless learner
+            learner = learner_factory(rng, n_budget_steps, env)
 
         collected_rewards = []
-        for _ in tqdm.trange(n_day, desc="day"):
-            # Every day, there is a random number of potential new customers
-            n_new_customers = rng.integers(0, 100)
+        for _ in tqdm.trange(n_days, desc="day"):
+            # Every day, there is a number of potential customers drawn from a
+            # normal distribution
+            n_new_customers = int(rng.normal(n_customers_mean, n_customers_variance))
 
             budgets = learner.predict(masked_env)
 
             # All the interactions of an entire day, depending on the budget
             interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
 
-            rewards = get_reward_from_interactions(interactions, env.product_prices)
+            rewards = _get_aggregated_reward_from_interactions(
+                interactions, env.product_prices
+            )
 
             collected_rewards.append(rewards)
             learner.learn(rewards, budgets)
