@@ -10,6 +10,7 @@ import numpy as np
 
 
 def _get_aggregated_reward_from_interactions(interactions: List[Interaction], prices):
+
     """Computes the margin made each day, for each of the 3 classes of users.
 
     Arguments:
@@ -67,12 +68,14 @@ def simulation(
         n_customers_variance: variance of the daily number of potential
         customers
 
-        n_experiment: Number of times the experiment is performed,
+        n_experiment: number of times the experiment is performed,
           to have statistically more accurate results. By default, the value is
           1 because in the real world we don't have time to do each experiment
           several times.
 
-        n_day: Duration of the experiment in days
+        n_days: duration of the experiment in days
+
+        n_budget_steps: number of steps in which the budget mustv be divided
 
         step: Step number of the simulation, related to the various steps
           requested by the project specification and corresponding to which
@@ -98,14 +101,16 @@ def simulation(
             learner = learner_factory(rng, n_budget_steps, env)
 
         collected_rewards = []
+
         for _ in tqdm.trange(n_days, desc="day"):
-            # Every day, there is a number of potential customers drawn from a
+            # Every day, there is a number of new potential customers drawn from a
             # normal distribution
             n_new_customers = int(rng.normal(n_customers_mean, n_customers_variance))
 
+            # Ask the learner to estimate the budgets to assign
             budgets = learner.predict(masked_env)
 
-            # All the interactions of an entire day, depending on the budget
+            # Compute interactions for the entire day
             interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
 
             rewards = _get_aggregated_reward_from_interactions(
@@ -113,6 +118,8 @@ def simulation(
             )
 
             collected_rewards.append(rewards)
+
+            # Update learner with new observed reward
             learner.learn(rewards, budgets)
 
         rewards_per_experiment.append(collected_rewards)
