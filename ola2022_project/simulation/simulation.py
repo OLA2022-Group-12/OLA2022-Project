@@ -57,9 +57,9 @@ def simulation(
     certain amount of days
 
     Arguments:
-        env:
+        env: an instance of the Environment class
 
-        learner_factory: A function which creates a new learner (needed to run
+        learner_factory: a function which creates a new learner (needed to run
         multiple experiments with "fresh" learners)
 
         n_customers_mean: expected value of the number of new potential
