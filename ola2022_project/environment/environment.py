@@ -49,7 +49,7 @@ class EnvironmentData:
     product_prices: List[float]
 
     # List of class parameters for each class, implemented as list of UserClassParameters
-    classes_parameters: List[UserClassParameters]
+    classes_parameters: List[List[UserClassParameters]]
 
     # The competitor budget is assumed to be constant, since the competitor is
     # non-strategic
@@ -107,7 +107,7 @@ class MaskedEnvironmentData:
     class_ratios: Optional[List[float]] = None
 
     # List of class parameters for each class, implemented as list of UserClassParameters
-    classes_parameters: Optional[List[UserClassParameters]] = None
+    classes_parameters: Optional[List[List[UserClassParameters]]] = None
 
 
 def create_masked_environment(
@@ -126,9 +126,30 @@ def example_environment(
     class_ratios=[0.3, 0.6, 0.1],
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
-        UserClassParameters(10, 0.06, 1, 150),
-        UserClassParameters(20, 0.03, 0.4, 100),
-        UserClassParameters(30, 0.07, 0.5, 260),
+        [
+            UserClassParameters(8, 0.06, 1, 160),
+            UserClassParameters(10, 0.06, 1, 150),
+            UserClassParameters(10, 0.07, 0.8, 160),
+            UserClassParameters(8, 0.03, 0.4, 120),
+            UserClassParameters(7, 0.06, 0.7, 150),
+            UserClassParameters(14, 0.08, 0.1, 180),
+        ],
+        [
+            UserClassParameters(25, 0.06, 1, 120),
+            UserClassParameters(22, 0.03, 0.4, 100),
+            UserClassParameters(20, 0.04, 0.5, 80),
+            UserClassParameters(16, 0.05, 0.4, 150),
+            UserClassParameters(24, 0.07, 0.3, 100),
+            UserClassParameters(20, 0.03, 0.1, 110),
+        ],
+        [
+            UserClassParameters(26, 0.03, 0.5, 1200),
+            UserClassParameters(33, 0.08, 0.5, 260),
+            UserClassParameters(25, 0.07, 1.0, 280),
+            UserClassParameters(30, 0.06, 0.6, 250),
+            UserClassParameters(31, 0.03, 0.2, 290),
+            UserClassParameters(36, 0.07, 0.3, 260),
+        ],
     ],
     competitor_budget=100,
     lam=0.5,
@@ -151,7 +172,7 @@ def example_environment(
         product_prices: list containing prices for every i+1 product
 
         classes_parameters: list containing UserClassParameters for every user class
-            we have
+            we have and every product (including the competitor)
 
         competitor_budget: budget the competitor spends in advertising
 
@@ -329,12 +350,16 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
 
     # For every class, product ratios are computed
     for i in range(3):
-        click_ratios = alpha_function(
-            budgets,
-            env_data.classes_parameters[i].steepness,
-            env_data.classes_parameters[i].shift,
-            env_data.classes_parameters[i].upper_bound,
-        )
+
+        click_ratios = [
+            alpha_function(
+                budgets[j],
+                env_data.classes_parameters[i][j].steepness,
+                env_data.classes_parameters[i][j].shift,
+                env_data.classes_parameters[i][j].upper_bound,
+            )
+            for j in range(len(budgets))
+        ]
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
@@ -393,7 +418,7 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
     # Checks if the price of the primary product is under the reservation price of the user class
     if (
         env_data.product_prices[primary_product]
-        < env_data.classes_parameters[user_class].reservation_price
+        < env_data.classes_parameters[user_class][primary_product].reservation_price
     ):
 
         # The customer buys a random quantity of the product between 1 and max_tems
