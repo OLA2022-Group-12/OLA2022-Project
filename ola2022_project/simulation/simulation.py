@@ -75,7 +75,7 @@ def simulation(
 
         n_days: duration of the experiment in days
 
-        n_budget_steps: number of steps in which the budget mustv be divided
+        n_budget_steps: number of steps in which the budget must be divided
 
         step: Step number of the simulation, related to the various steps
           requested by the project specification and corresponding to which
