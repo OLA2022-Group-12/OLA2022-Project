@@ -18,7 +18,7 @@ UserClassParameters = namedtuple(
 )
 
 # Named tuple containing the outcome of a user interaction
-Interaction = namedtuple("Interaction", ["user_class", "items_bought"])
+Interaction = namedtuple("Interaction", ["user_class", "items_bought", "landed_on"])
 
 
 class Step(enum.Enum):
@@ -381,9 +381,9 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
         # According to product ratios, for every product the computed number on
         # users are landed on the right and the interaction starts
         for product, ratio in enumerate(product_ratios):
-            for interaction in range(ratio):
+            for _ in range(ratio):
                 user_class, items = _get_interaction(rng, i, product, env_data)
-                total_interactions.append(Interaction(user_class, items))
+                total_interactions.append(Interaction(user_class, items, product))
 
     # Shuffle the list to make data more realistic
     rng.shuffle(total_interactions)
