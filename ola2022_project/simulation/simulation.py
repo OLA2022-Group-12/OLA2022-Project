@@ -106,6 +106,12 @@ def simulation(
                 np.rint(rng.normal(n_customers_mean, n_customers_variance))
             )
 
+            # The mimnum number of customers is set to 1, so that none of the
+            # operations of the environment requiring division computation break
+            # and we avoid not consistent datab like a negative number of customers
+            if n_new_customers <= 0:
+                n_new_customers = 1
+
             # Ask the learner to estimate the budgets to assign
             budgets = learner.predict(masked_env)
 
