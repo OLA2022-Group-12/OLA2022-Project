@@ -22,10 +22,7 @@ def _get_aggregated_reward_from_interactions(interactions: List[Interaction], pr
         prices: Price of the 5 products
 
     Returns:
-        The list, with the size corresponding to the number of user classes
-        + 1, return the sum of the margin made each day, for each of the 3
-        classes of users (and the zeroth place is the user-classes entries,
-        aggregated).
+        An integer representing the total aggregated reward of the entire list of interactions.
     """
 
     # Creates a list contaninig only the number of units every customer bought
@@ -104,8 +101,10 @@ def simulation(
 
         for _ in tqdm.trange(n_days, desc="day"):
             # Every day, there is a number of new potential customers drawn from a
-            # normal distribution
-            n_new_customers = int(rng.normal(n_customers_mean, n_customers_variance))
+            # normal distribution, rounded to the closest integer
+            n_new_customers = int(
+                np.rint(rng.normal(n_customers_mean, n_customers_variance))
+            )
 
             # Ask the learner to estimate the budgets to assign
             budgets = learner.predict(masked_env)
