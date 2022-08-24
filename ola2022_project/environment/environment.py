@@ -48,7 +48,9 @@ class EnvironmentData:
     # Price of the 5 products
     product_prices: List[float]
 
-    # List of class parameters for each class, implemented as list of UserClassParameters
+    # List of class parameters for each class and product, implemented as list
+    # of lists of UserClassParameters. Each class has distinct parameters for
+    # every product
     classes_parameters: List[List[UserClassParameters]]
 
     # The competitor budget is assumed to be constant, since the competitor is
@@ -106,7 +108,9 @@ class MaskedEnvironmentData:
     # Probability of every class to show up. They must add up to 1
     class_ratios: Optional[List[float]] = None
 
-    # List of class parameters for each class, implemented as list of UserClassParameters
+    # List of class parameters for each class and product, implemented as list
+    # of lists of UserClassParameters. Each class has distinct parameters for
+    # every product
     classes_parameters: Optional[List[List[UserClassParameters]]] = None
 
 
