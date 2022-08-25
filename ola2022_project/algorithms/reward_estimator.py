@@ -20,7 +20,7 @@ def compute_user_influence(unaffordable_ratio, env: MaskedEnvironmentData):
         if potential_sold_units[p] == 1:
             selected_population = affordable_ratio
         else:
-            selected_population = np.ones(n_products)
+            selected_population = np.ones(5)
 
         estimated_reward.append(
             _simulate_interaction(
