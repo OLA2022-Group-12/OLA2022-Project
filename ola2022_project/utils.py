@@ -77,9 +77,11 @@ def calculate_aggregated_budget_value(
             [
                 product_price
                 * product_graph_landing_value
-                * budget_alphas_for_class[product]
-                for product, (product_price, product_graph_landing_value) in enumerate(
-                    zip(product_prices, product_graph_landing_values)
+                * budget_alpha
+                for product_price, product_graph_landing_value, budget_alpha in zip(
+                    product_prices, 
+                    product_graph_landing_values, 
+                    budget_alphas_for_class
                 )
             ]
         )
