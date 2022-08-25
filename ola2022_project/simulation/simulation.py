@@ -95,7 +95,7 @@ def simulation(
 
         elif step == Step.ONE:
             # Creation of alphaless learner
-            learner = learner_factory(rng, n_budget_steps, env)
+            learner = learner_factory(rng, n_budget_steps, masked_env)
 
         collected_rewards = []
 
