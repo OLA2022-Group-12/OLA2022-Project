@@ -4,6 +4,7 @@ import numpy as np
 from numpy.random import default_rng
 from dataclasses import dataclass, asdict
 from typing import Optional, List, Tuple
+from math import isclose
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -367,7 +368,9 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        click_ratios = np.where(click_ratios == 0, 1e-16, click_ratios)
+        for product in range(len(click_ratios)):
+            if isclose(click_ratios[product], 0.0, rel_tol=1e-10):
+                click_ratios[product] = 2e-16
 
         alpha_ratios = rng.dirichlet(click_ratios)
 
