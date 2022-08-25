@@ -114,9 +114,15 @@ class AlphaUnitslessLearner(Learner):
 
 class AlphalessLearner(AlphaUnitslessLearner):
 
-    """This class implements an instance of the learner with unknown alpha functions.
-    It works with aggregated data (regarding classes) but can observe all the daily
-    interactions, so the reward must not be aggregated.
+    """This class implements an instance of the learner with unknown alpha
+    functions. It works with aggregated data (regarding classes) but can observe
+    all the daily interactions, so the reward itself must not be aggregated.
+
+    Instead of estimating directly the expected reward, the algorithm will first
+    estimate the expected number of customers landing on certain product pages,
+    then it will compute a reward multiplier, which is a number that if
+    multiplied by the previously mentioned estimation, it will give a very
+    accurate expected reward estimation.
     """
 
     def __init__(
@@ -128,9 +134,17 @@ class AlphalessLearner(AlphaUnitslessLearner):
         estimation_accuracy=10,
     ) -> None:
 
+        """Arguments:
+        estimation_accuracy: integer representing for how many days the algorithm
+            will try to optimize the reward multiplier estimation. This has nothing
+            to do with the MAB learner, and is needed only for the first few days.
+            (read class definition)
+        """
+
         super().__init__(rng, n_budget_steps, data, mab_algorithm)
         self.unaffordable_ratio = np.ones(self.n_products)
         self.estimation_accuracy = estimation_accuracy
+        self.product_reward_multiplier = 1
 
     def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
 
@@ -181,6 +195,7 @@ class AlphalessLearner(AlphaUnitslessLearner):
             )
 
     def _compute_unaffordable_ratio(self, interactions: List[Interaction]):
+
         unaffordable_ratio = np.zeros(self.n_products)
 
         for prod in range(self.n_products):
