@@ -18,12 +18,13 @@ def calculate_aggregated_budget_value(
     Arguments:
         product_graph_landing_values: A list of the value of landing on a certain product
         product_prices: A list of the product prices
-        class_budget_alphas: A (CxM) matrix of the estimated value alphas of a
-        given class for the given budget steps (C is class and M is budget
-        steps)
+        class_budget_alphas: A (CxPxM) matrix of the estimated value alphas of a
+        given class for the given product and budget steps (C is class, P is products
+        and M is budget steps)
         class_ratios: A list of the class ratios
         class_reservation_prices: A optional list of the known reservation
-        prices for class i + 1. If not known, will assume there is no limit
+        prices for class i + 1. If not known, will assume there is no limit.
+        It's a (CxP) matrix where C is the classes and P the products
 
     Returns:
         An (PxM) matrix which has the aggregated budget values across the given
