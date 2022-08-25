@@ -8,6 +8,9 @@ class StupidLearner(Learner):
     doesn't update its prediction.
     """
 
+    def __init__(self, n_budget_steps) -> None:
+        pass
+
     def learn(self, _reward, _prediction):
         pass
 
