@@ -1,4 +1,4 @@
-import tqdm
+from tqdm.notebook import trange
 from ola2022_project.environment.environment import (
     get_day_of_interactions,
     create_masked_environment,
@@ -87,7 +87,7 @@ def simulation(
 
     masked_env = create_masked_environment(step, env)
 
-    for _ in tqdm.trange(n_experiment, desc="experiment"):
+    for _ in trange(n_experiment, desc="experiment"):
 
         if step == Step.ZERO:
             # Creation of clairovyant learner
@@ -99,7 +99,7 @@ def simulation(
 
         collected_rewards = []
 
-        for _ in tqdm.trange(n_days, desc="day"):
+        for _ in trange(n_days, desc="day"):
             # Every day, there is a number of new potential customers drawn from a
             # normal distribution, rounded to the closest integer
             n_new_customers = int(
