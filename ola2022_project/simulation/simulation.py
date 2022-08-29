@@ -90,7 +90,7 @@ def simulation(
     for _ in trange(n_experiment, desc="experiment"):
 
         if step == Step.ZERO:
-            # Creation of clairovyant learner
+            # Creation of clairovyant learner or stupid learner
             learner = learner_factory(n_budget_steps)
 
         elif step == Step.ONE:
