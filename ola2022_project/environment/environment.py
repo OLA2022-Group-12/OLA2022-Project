@@ -148,7 +148,7 @@ def example_environment(
             UserClassParameters(20, 0.03, 0.1, 110),
         ],
         [
-            UserClassParameters(26, 0.03, 0.5, 1200),
+            UserClassParameters(26, 0.03, 0.5, 120),
             UserClassParameters(33, 0.08, 0.5, 260),
             UserClassParameters(25, 0.07, 1.0, 280),
             UserClassParameters(30, 0.06, 0.6, 250),
