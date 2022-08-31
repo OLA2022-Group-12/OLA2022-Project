@@ -92,9 +92,17 @@ def get_next_product(
 
     primary_product = current_path[-1]
     secondary_products = env_data.next_products[primary_product]
-    prices = [
+    secondary_prices = [
         env_data.product_prices[secondary_products[0]],
         env_data.product_prices[secondary_products[1]],
+    ]
+    user_reservation_prices = [
+        env_data.classes_parameters[user_class][
+            secondary_products[0]
+        ].reservation_price,
+        env_data.classes_parameters[user_class][
+            secondary_products[1]
+        ].reservation_price,
     ]
 
     next_ = []
@@ -104,27 +112,28 @@ def get_next_product(
     # price of the user class
     # And that the product has not already been displayed as a primary product
     if (
-        prices[0] < env_data.classes_parameters[user_class].reservation_price
+        secondary_prices[0] < user_reservation_prices[0]
         and not secondary_products[0] in current_path
     ):
         next_.append(secondary_products[0])
         expected_income.append(
-            prices[0] * env_data.graph[primary_product, secondary_products[0]]
+            secondary_prices[0] * env_data.graph[primary_product, secondary_products[0]]
         )
 
     # Checks if the price of the second secondary product is under the reservation
     # price of the user class
     # And that the product has not already been displayed as a primary product
     if (
-        prices[1] < env_data.classes_parameters[user_class].reservation_price
+        secondary_prices[1] < user_reservation_prices[1]
         and not secondary_products[1] in current_path
     ):
         next_.append(secondary_products[1])
         expected_income.append(
-            prices[0]
-            * env_data.graph[primary_product, secondary_products[0]]
-            * env_data.lam
+            secondary_prices[1]
+            * env_data.graph[primary_product, secondary_products[1]]
+            * env_data.lam  # NB! This is the difference between the two ifs
         )
+
     return (next_, expected_income)
 
 
