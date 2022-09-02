@@ -35,11 +35,11 @@ class GPTSLearner(BaseMAB):
         rng,
         n_arms,
         arms,
-        std=10,
+        std=5,
         kernel_range=(1e-2, 1e4),
         kernel_scale=1,
         theta=1.0,
-        l_param=10,
+        l_param=1,
     ):
         super().__init__(n_arms)
         self.arms = arms
@@ -52,7 +52,7 @@ class GPTSLearner(BaseMAB):
             Ck(theta, kernel_range) * RBF(l_param, kernel_range) * kernel_scale
         )
         self.gp = GaussianProcessRegressor(
-            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=2
+            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=1
         )
 
     def _update_observations(self, arm_idx, reward):

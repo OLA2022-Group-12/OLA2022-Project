@@ -8,6 +8,7 @@ from ola2022_project.environment.environment import (
     create_masked_environment,
     Step,
     Interaction,
+    remove_classes,
     EnvironmentData,
 )
 from ola2022_project.algorithms.multi_armed_bandits import Mab

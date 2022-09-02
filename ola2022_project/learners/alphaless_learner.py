@@ -1,8 +1,7 @@
 from typing import List
 import numpy as np
-from ola2022_project.algorithms.reward_estimator import compute_user_influence
 from ola2022_project.environment.environment import (
-    Interaction,
+    AggregatedInteraction,
     MaskedEnvironmentData,
     Step,
 )
@@ -113,101 +112,41 @@ class AlphaUnitslessLearner(Learner):
 
 
 class AlphalessLearner(AlphaUnitslessLearner):
-
-    """This class implements an instance of the learner with unknown alpha
-    functions. It works with aggregated data (regarding classes) but can observe
-    all the daily interactions, so the reward itself must not be aggregated.
-
-    Instead of estimating directly the expected reward, the algorithm will first
-    estimate the expected number of customers landing on certain product pages,
-    then it will compute a reward multiplier, which is a number that if
-    multiplied by the previously mentioned estimation, it will give a very
-    accurate expected reward estimation.
-    """
-
     def __init__(
-        self,
-        rng,
-        n_budget_steps,
-        data: MaskedEnvironmentData,
-        mab_algorithm=Mab.GPTS,
-        estimation_accuracy=10,
+        self, rng, n_budget_steps, data: MaskedEnvironmentData, mab_algorithm=Mab.GPTS
     ) -> None:
-
-        """Arguments:
-        estimation_accuracy: integer representing for how many days the algorithm
-            will try to optimize the reward multiplier estimation. This has nothing
-            to do with the MAB learner, and is needed only for the first few days.
-            (read class definition)
-        """
-
         super().__init__(rng, n_budget_steps, data, mab_algorithm)
-        self.unaffordable_ratio = np.ones(self.n_products)
-        self.estimation_accuracy = estimation_accuracy
-        self.product_reward_multiplier = 1
 
-    def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
-
-        landing_values = [
-            self.product_mabs[i].estimation() for i in range(len(self.product_mabs))
-        ]
-
-        aggregated_budget_value_matrix = (
-            np.array(landing_values) * self.product_reward_multiplier.T
-        )
-
-        best_allocation_index = budget_assignment(aggregated_budget_value_matrix)
-        best_allocation = self.budget_steps[best_allocation_index]
-
-        return best_allocation
-
-    def learn(self, interactions: List[Interaction], prediction: np.ndarray):
-
+    def learn(self, interactions: List[AggregatedInteraction], prediction: np.ndarray):
         if not isinstance(interactions, list):
             raise RuntimeError(
                 """Alpha-less learner cannot learn from aggregate reward,
                 it needs a list of interactions."""
             )
 
-        for i, p in enumerate(prediction):
-            prediction_index = np.where(self.budget_steps == p)[0][0]
-            self.product_mabs[i].update(prediction_index, interactions)
+        rewards = self._compute_products_rewards(interactions, self.env.product_prices)
 
-        if self.t == 1:
-            self.unaffordable_ratio = self._compute_unaffordable_ratio(interactions)
-            self.user_influence = compute_user_influence(
-                self.unaffordable_ratio, self.env
-            )
-            self.product_reward_multiplier = np.atleast_2d(
-                compute_user_influence(
-                    self.n_products, self.unaffordable_ratio, self.env
-                )
-            )
+        for mab, pred, rew in zip(self.product_mabs, prediction, rewards):
+            prediction_index = np.where(self.budget_steps == pred)[0][0]
+            mab.update(prediction_index, rew)
 
-        elif self.t <= self.estimation_accuracy:
-            self.unaffordable_ratio += (
-                self._compute_unaffordable_ratio(interactions) - self.unaffordable_ratio
-            ) / self.t
-            self.product_reward_multiplier = np.atleast_2d(
-                compute_user_influence(
-                    self.n_products, self.unaffordable_ratio, self.env
-                )
-            )
+    def _compute_products_rewards(
+        self, interactions: List[AggregatedInteraction], product_prices
+    ):
 
-    def _compute_unaffordable_ratio(self, interactions: List[Interaction]):
+        reward_per_product = list()
 
-        unaffordable_ratio = np.zeros(self.n_products)
+        for product in range(len(product_prices)):
 
-        for prod in range(self.n_products):
             customers_landed_on_product = list(
-                filter(lambda x: x.landed_on == prod, interactions)
-            )
-            customers_not_buying_product = list(
-                filter(lambda x: x.items_bought[prod] == 0, customers_landed_on_product)
+                filter(lambda x: x.landed_on == product, interactions)
             )
 
-            unaffordable_ratio[prod] = len(customers_not_buying_product) / len(
-                customers_landed_on_product
-            )
+            units = [e.items_bought for e in customers_landed_on_product]
 
-        return unaffordable_ratio
+            if not units:
+                units = np.zeros((1, self.n_products))
+
+            reward_per_product.append(np.dot(np.sum(units, axis=0), product_prices))
+
+        return reward_per_product
