@@ -23,7 +23,9 @@ UserClassParameters = namedtuple(
 )
 
 # Named tuple containing the outcome of a user interaction
-Interaction = namedtuple("Interaction", ["user_class", "items_bought", "landed_on"])
+Interaction = namedtuple(
+    "Interaction", ["user_class", "items_bought", "landed_on", "edges"]
+)
 
 
 class Step(enum.Enum):
@@ -318,9 +320,11 @@ def _get_interaction(rng, user_class, primary_product, env_data):
     items_bought = np.zeros(5, dtype=np.int8)
 
     # The user goes to the page of the primary_product
-    items_bought = _go_to_page(rng, user_class, primary_product, items_bought, env_data)
+    items_bought, edges = _go_to_page(
+        rng, user_class, primary_product, items_bought, [], env_data
+    )
 
-    return user_class, items_bought
+    return user_class, items_bought, edges
 
 
 def get_day_of_interactions(rng, num_customers, budgets, env_data):
@@ -398,15 +402,17 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
         # users are landed on the right and the interaction starts
         for product, ratio in enumerate(product_ratios):
             for _ in range(ratio):
-                user_class, items = _get_interaction(rng, i, product, env_data)
-                total_interactions.append(Interaction(user_class, items, product))
+                user_class, items, edges = _get_interaction(rng, i, product, env_data)
+                total_interactions.append(
+                    Interaction(user_class, items, product, edges)
+                )
 
     # Shuffle the list to make data more realistic
     rng.shuffle(total_interactions)
     return total_interactions
 
 
-def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
+def _go_to_page(rng, user_class, primary_product, items_bought, edges, env_data):
 
     """Shows the user a page of the specified primary products.
 
@@ -452,10 +458,11 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
             < env_data.graph[primary_product, secondary_products[0]]
             and not items_bought[secondary_products[0]]
         ):
+            edges.append((primary_product, secondary_products[0]))
             # Items bought on the opened page are added to the ones bought in
             # the current page
-            items_bought = _go_to_page(
-                rng, user_class, secondary_products[0], items_bought, env_data
+            items_bought, edges = _go_to_page(
+                rng, user_class, secondary_products[0], items_bought, edges, env_data
             )
 
         # Same as before, if the user watches the second slot and clicks on it
@@ -466,8 +473,9 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
             < env_data.graph[primary_product, secondary_products[1]] * env_data.lam
             and not items_bought[secondary_products[1]]
         ):
-            items_bought = _go_to_page(
-                rng, user_class, secondary_products[1], items_bought, env_data
+            edges.append((primary_product, secondary_products[1]))
+            items_bought, edges = _go_to_page(
+                rng, user_class, secondary_products[1], items_bought, edges, env_data
             )
 
-    return items_bought
+    return items_bought, edges
