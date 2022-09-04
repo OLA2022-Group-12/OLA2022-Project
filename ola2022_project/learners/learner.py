@@ -1,6 +1,9 @@
+from typing import List
 from abc import ABC, abstractmethod
-from ola2022_project.environment.environment import MaskedEnvironmentData
+
 import numpy as np
+
+from ola2022_project.environment.environment import MaskedEnvironmentData, Interaction
 
 
 class Learner(ABC):
@@ -11,14 +14,20 @@ class Learner(ABC):
     """
 
     @abstractmethod
-    def learn(self, reward: float, prediction: np.ndarray):
+    def learn(
+        self, interactions: List[Interaction], reward: float, prediction: np.ndarray
+    ):
 
         """Updates the learner's properties according to the reward received.
 
         Arguments:
+            interactions: the interactions of the users which led to the given
+            reward
+
             reward: the reward obtained from the environment based on the
             prediction given, needed for the tuning of internal properties done
             by the learner
+
             prediction: array containing the previous budget evaluation of the learner
         """
 

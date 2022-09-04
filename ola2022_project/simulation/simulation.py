@@ -137,7 +137,7 @@ def simulation(
             collected_rewards.append(rewards)
 
             # Update learner with new observed reward
-            learner.learn(rewards, budgets)
+            learner.learn(interactions, rewards, budgets)
 
         rewards_per_experiment.append(collected_rewards)
 
