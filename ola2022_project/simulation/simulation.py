@@ -1,12 +1,19 @@
+import logging
+
 from tqdm.notebook import trange
 from ola2022_project.environment.environment import (
     get_day_of_interactions,
     create_masked_environment,
     Step,
     Interaction,
+    EnvironmentData,
 )
 from typing import List
 import numpy as np
+from numpy.random import Generator
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_aggregated_reward_from_interactions(interactions: List[Interaction], prices):
@@ -27,27 +34,29 @@ def _get_aggregated_reward_from_interactions(interactions: List[Interaction], pr
 
     # Creates a list contaninig only the number of units every customer bought
     # for each product
-    units_sold = [i.items_bought for i in interactions]
+    units_sold = np.array([i.items_bought for i in interactions])
 
     # First with np.sum() we compute a single array containing how many units we
     # sold for every product. Then the units are multiplied element-wise by the
     # price of the corresponding product
-    reward_per_product = np.sum(units_sold, axis=0) * prices
+    reward_per_product = (
+        np.sum(units_sold, axis=0) * prices if len(units_sold) > 0 else np.array([])
+    )
 
     # The profit of all the products are summed
     return np.sum(reward_per_product)
 
 
 def simulation(
-    rng,
-    env,
+    rng: Generator,
+    env: EnvironmentData,
     learner_factory,
-    n_customers_mean=100,
-    n_customers_variance=10,
-    n_experiment=1,
-    n_days=100,
-    n_budget_steps=5,
-    step=Step.ZERO,
+    n_customers_mean: int = 100,
+    n_customers_variance: int = 10,
+    n_experiment: int = 1,
+    n_days: int = 100,
+    n_budget_steps: int = 5,
+    step: Step = Step.ZERO,
 ):
 
     """Runs the simulation for a certain amount of experiments consisting of a
@@ -93,13 +102,13 @@ def simulation(
             # Creation of clairovyant learner or stupid learner
             learner = learner_factory(n_budget_steps)
 
-        elif step == Step.ONE:
-            # Creation of alphaless learner
+        elif step == Step.ONE or step == Step.TWO:
+            # Creation of alphaless learner or graphless learner
             learner = learner_factory(rng, n_budget_steps, masked_env)
 
         collected_rewards = []
 
-        for _ in trange(n_days, desc="day"):
+        for day in trange(n_days, desc="day"):
             # Every day, there is a number of new potential customers drawn from a
             # normal distribution, rounded to the closest integer
             n_new_customers = int(
@@ -112,11 +121,14 @@ def simulation(
             if n_new_customers <= 0:
                 n_new_customers = 1
 
+            logger.debug(f"Got {n_new_customers} new customer(s) on day {day}")
+
             # Ask the learner to estimate the budgets to assign
             budgets = learner.predict(masked_env)
 
             # Compute interactions for the entire day
             interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
+            logger.debug(f"Interactions: {interactions}")
 
             rewards = _get_aggregated_reward_from_interactions(
                 interactions, env.product_prices

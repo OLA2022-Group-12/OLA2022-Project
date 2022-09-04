@@ -1,16 +1,20 @@
+import logging
 import enum
-from collections import namedtuple
-import numpy as np
-from numpy.random import default_rng
-from dataclasses import dataclass, asdict
 from typing import Optional, List, Tuple
 from math import isclose
+from collections import namedtuple
+from dataclasses import dataclass, asdict
+
+import numpy as np
+from numpy.random import default_rng
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
 instance of Environment_data with sample values. The class can also be created
 by itself by specifying all attributes.
 """
+
+logger = logging.getLogger(__name__)
 
 
 # Named tuple containing the fundamental parameters unique to each class
@@ -25,7 +29,7 @@ Interaction = namedtuple("Interaction", ["user_class", "items_bought", "landed_o
 class Step(enum.Enum):
     ZERO = ()
     ONE = ("classes_parameters",)
-    TWO = ("classes_parameters", "graph")
+    TWO = ("graph",)
 
 
 @dataclass
@@ -120,7 +124,12 @@ def create_masked_environment(
 ) -> MaskedEnvironmentData:
     filtered_data = asdict(env)
     for name in step.value:
-        del filtered_data[name]
+        try:
+            del filtered_data[name]
+        except KeyError:
+            logger.debug(
+                f"Programming error: Step configured with field not found in environment: '{name}'"
+            )
 
     return MaskedEnvironmentData(**filtered_data)
 
