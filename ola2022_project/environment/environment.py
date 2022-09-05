@@ -4,12 +4,9 @@ from typing import Optional, List, Tuple
 from math import isclose
 from collections import namedtuple
 from dataclasses import dataclass, asdict
-
 import numpy as np
 from numpy.random import default_rng
-from dataclasses import dataclass, asdict
-from typing import Optional, List, Tuple
-from math import isclose
+
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
