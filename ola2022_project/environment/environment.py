@@ -1,12 +1,12 @@
 import logging
-import enum
+from aenum import Enum, NoAlias
 from typing import Optional, List, Tuple
 from math import isclose
 from collections import namedtuple
 from dataclasses import dataclass, asdict
-
 import numpy as np
 from numpy.random import default_rng
+
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -27,11 +27,20 @@ Interaction = namedtuple(
     "Interaction", ["user_class", "items_bought", "landed_on", "edges"]
 )
 
+# Similar to Interaction but doesn't cointain any reference to a user class
+AggregatedInteraction = namedtuple(
+    "AggregatedInteraction", ["items_bought", "landed_on"]
+)
 
-class Step(enum.Enum):
+
+class Step(Enum):
+
+    _settings_ = NoAlias
+
     ZERO = ()
     ONE = ("classes_parameters",)
-    TWO = ("graph",)
+    TWO = ("classes_parameters",)
+    THREE = ("graph",)
 
 
 @dataclass
@@ -479,3 +488,7 @@ def _go_to_page(rng, user_class, primary_product, items_bought, edges, env_data)
             )
 
     return items_bought, edges
+
+
+def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteraction]:
+    return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]
