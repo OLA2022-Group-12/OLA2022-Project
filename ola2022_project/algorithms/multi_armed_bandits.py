@@ -96,6 +96,12 @@ class GPTSLearner(BaseMAB):
         return self.rng.normal(self.means, self.sigmas)
 
 
+class GPUCB1Learner(GPTSLearner):
+    def estimation(self):
+        upper_bounds = self.means + 1.96 * self.sigmas
+        return upper_bounds
+
+
 class Mab(enum.Enum):
     GPTS = ()
     GPUCB1 = ()
