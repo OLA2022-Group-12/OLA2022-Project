@@ -3,8 +3,8 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional
 from ola2022_project.utils import compute_hoeffding_bound
-from ola2022_project.environment import Feature
-from ola2022_project.simulation import (
+from ola2022_project.environment.environment import Feature
+from ola2022_project.simulation.dataset_simulation import (
     dataset_simulation,
     DatasetSimParameters,
 )
@@ -103,17 +103,20 @@ def feature_filter(dataset, features: List[Feature]):
             list(
                 filter(
                     lambda interaction: all(
-                        lambda feature: feature in interaction.user_features
-                    )
-                ),
-                dataset_day,
+                        (feature in interaction.user_features) for feature in features
+                    ),
+                    dataset_day,
+                )
             )
         )
     return filtered_dataset
 
 
 def feature_split(
-    sim_param: DatasetSimParameters, dataset, context: Context, feature: Feature = None
+    sim_param: DatasetSimParameters,
+    dataset,
+    context: Context = None,
+    feature: Feature = None,
 ) -> List[Context]:
 
     """Generates, trains and evaluates over a given dataset new contexts based on a feature split,
@@ -146,15 +149,17 @@ def feature_split(
 
         return Context(
             [],  # In the base model all features are aggregated
-            np.sum(context.nums),  # All entries in the dataset are considered
+            np.sum(
+                [len(d) for d in dataset]
+            ),  # All entries in the dataset are considered
             1,  # Probability = 100%
             max_exp_reward,
             compute_weighted_bound(1, max_exp_reward),
         )
 
     # Split feature given as parameter
-    feature_1 = Feature(feature.feature, 0)
-    feature_2 = Feature(feature.feature, 1)
+    feature_1 = Feature(feature.name, 0)
+    feature_2 = Feature(feature.name, 1)
 
     # Return the two contexts, each evaluating a value of the split feature
     return [
@@ -193,7 +198,8 @@ def feature_half_split(
     n_split = [len(d) for d in dataset_split]
     exp_prob = n / np.sum(n_split)
     # Compute resulting set of features
-    features = np.concatenate(context.features, feature)
+    features = context.features.copy()
+    features.append(feature)
 
     # Simulate interactions using the dataset
     reward = dataset_simulation(sim_param, dataset_split)

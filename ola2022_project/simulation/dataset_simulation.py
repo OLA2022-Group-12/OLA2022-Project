@@ -78,22 +78,23 @@ def dataset_simulation(
     elif sim_param.step == Step.ONE:
         # Creation of alphaless learner
         learner = sim_param.learner_factory(
-            sim_param.rng, sim_param.n_budget_steps, sim_param.env
+            sim_param.rng, sim_param.n_budget_steps, masked_env
         )
 
     collected_rewards = []
 
-    for day_interactions in tqdm(dataset, desc="day"):
-        # Ask the learner to estimate the budgets to assign
-        budgets = learner.predict(masked_env)
+    for day_interactions in tqdm.tqdm(dataset, desc="day"):
+        if day_interactions:
+            # Ask the learner to estimate the budgets to assign
+            budgets = learner.predict(masked_env)
 
-        rewards = _get_aggregated_reward_from_interactions(
-            day_interactions, sim_param.env.product_prices
-        )
+            rewards = _get_aggregated_reward_from_interactions(
+                day_interactions, sim_param.env.product_prices
+            )
 
-        collected_rewards.append(rewards)
+            collected_rewards.append(rewards)
 
-        # Update learner with new observed reward
-        learner.learn(rewards, budgets)
+            # Update learner with new observed reward
+            learner.learn(day_interactions, rewards, budgets)
 
     return collected_rewards
