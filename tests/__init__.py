@@ -1,5 +1,9 @@
 import numpy as np
-from ola2022_project.environment.environment import EnvironmentData, UserClassParameters
+from ola2022_project.environment.environment import (
+    EnvironmentData,
+    UserClassParameters,
+    Feature,
+)
 import hypothesis.strategies as st
 from hypothesis.extra.numpy import arrays
 
@@ -122,11 +126,25 @@ def generated_environment(draw):
             for i, (x1, x2) in enumerate(ns)
         ]
     )
+
+    # I don't know how to make this more test-ish other than hardcoding id.
+    # I don't much room to change values here and there. If someone has a
+    # better idea they're welcome to implement it.
+    class_features = [
+        [
+            [Feature("feature_1", 0), Feature("feature_1", 0)],
+            [Feature("feature_1", 0), Feature("feature_1", 1)],
+        ],
+        [[Feature("feature_1", 1), Feature("feature_1", 0)]],
+        [[Feature("feature_1", 1), Feature("feature_1", 1)]],
+    ]
+
     next_products = draw(next_products_st)
 
     return EnvironmentData(
         total_budget=total_budget,
         class_ratios=class_ratios,
+        class_features=class_features,
         product_prices=product_prices,
         classes_parameters=classes_parameters,
         competitor_budget=competitor_budget,

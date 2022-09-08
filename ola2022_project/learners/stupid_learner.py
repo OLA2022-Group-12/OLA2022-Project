@@ -8,7 +8,10 @@ class StupidLearner(Learner):
     doesn't update its prediction.
     """
 
-    def learn(self, _reward, _prediction):
+    def __init__(self, _=True) -> None:
+        pass
+
+    def learn(self, interactions, reward, prediction):
         pass
 
     def predict(self, data: MaskedEnvironmentData) -> np.ndarray:

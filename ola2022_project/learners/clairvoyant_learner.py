@@ -22,7 +22,7 @@ class ClairvoyantLearner(Learner):
     def __init__(self, n_budget_steps=5) -> None:
         self.n_budget_steps = n_budget_steps
 
-    def learn(self, _reward, _prediction):
+    def learn(self, interactions, reward, prediction):
         pass
 
     def predict(self, data: MaskedEnvironmentData) -> np.ndarray:

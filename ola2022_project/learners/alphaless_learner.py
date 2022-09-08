@@ -1,5 +1,7 @@
+from typing import List
 import numpy as np
-from ola2022_project.environment.environment import MaskedEnvironmentData
+
+from ola2022_project.environment.environment import MaskedEnvironmentData, Interaction
 from ola2022_project.learners import Learner
 from ola2022_project.algorithms.multi_armed_bandits import GPTSLearner, Mab
 from ola2022_project.optimization import budget_assignment
@@ -76,7 +78,9 @@ class AlphalessLearner(Learner):
 
         return best_allocation
 
-    def learn(self, reward: float, prediction: np.ndarray):
+    def learn(
+        self, interactions: List[Interaction], reward: float, prediction: np.ndarray
+    ):
         for i, p in enumerate(prediction):
             prediction_index = np.where(self.budget_steps == p)[0][0]
             self.product_mabs[i].update(prediction_index, reward)

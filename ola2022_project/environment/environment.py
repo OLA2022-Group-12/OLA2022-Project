@@ -1,9 +1,12 @@
-import enum
+import logging
+from aenum import Enum, NoAlias
+from typing import Optional, List, Tuple
+from math import isclose
 from collections import namedtuple
+from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
-from dataclasses import dataclass, asdict
-from typing import Optional, List, Tuple
+
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -11,20 +14,36 @@ instance of Environment_data with sample values. The class can also be created
 by itself by specifying all attributes.
 """
 
+logger = logging.getLogger(__name__)
+
 
 # Named tuple containing the fundamental parameters unique to each class
 UserClassParameters = namedtuple(
     "UserClassParameters", ["reservation_price", "steepness", "shift", "upper_bound"]
 )
 
+# Contains the name and the value of a single user feature (which can be either 0 or 1)
+Feature = namedtuple("Feature", ["name", "value"])
+
 # Named tuple containing the outcome of a user interaction
-Interaction = namedtuple("Interaction", ["user_class", "items_bought", "landed_on"])
+Interaction = namedtuple(
+    "Interaction", ["user_features", "user_class", "items_bought", "landed_on", "edges"]
+)
+
+# Similar to Interaction but doesn't cointain any reference to a user class
+AggregatedInteraction = namedtuple(
+    "AggregatedInteraction", ["items_bought", "landed_on"]
+)
 
 
-class Step(enum.Enum):
+class Step(Enum):
+
+    _settings_ = NoAlias
+
     ZERO = ()
     ONE = ("classes_parameters",)
-    TWO = ("classes_parameters", "graph")
+    TWO = ("classes_parameters",)
+    THREE = ("graph",)
 
 
 @dataclass
@@ -44,6 +63,9 @@ class EnvironmentData:
 
     # Probability of every class to show up. They must add up to 1
     class_ratios: List[float]
+
+    # Features associated to every class
+    class_features: List[List]
 
     # Price of the 5 products
     product_prices: List[float]
@@ -108,6 +130,9 @@ class MaskedEnvironmentData:
     # Probability of every class to show up. They must add up to 1
     class_ratios: Optional[List[float]] = None
 
+    # Features associated to every class
+    class_features: Optional[List[List]] = None
+
     # List of class parameters for each class and product, implemented as list
     # of lists of UserClassParameters. Each class has distinct parameters for
     # every product
@@ -119,7 +144,12 @@ def create_masked_environment(
 ) -> MaskedEnvironmentData:
     filtered_data = asdict(env)
     for name in step.value:
-        del filtered_data[name]
+        try:
+            del filtered_data[name]
+        except KeyError:
+            logger.debug(
+                f"Programming error: Step configured with field not found in environment: '{name}'"
+            )
 
     return MaskedEnvironmentData(**filtered_data)
 
@@ -128,6 +158,14 @@ def example_environment(
     rng=default_rng(),
     total_budget=300,
     class_ratios=[0.3, 0.6, 0.1],
+    class_features=[
+        [
+            [Feature("feature_1", 0), Feature("feature_1", 0)],
+            [Feature("feature_1", 0), Feature("feature_1", 1)],
+        ],
+        [[Feature("feature_1", 1), Feature("feature_1", 0)]],
+        [[Feature("feature_1", 1), Feature("feature_1", 1)]],
+    ],
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
         [
@@ -147,7 +185,7 @@ def example_environment(
             UserClassParameters(20, 0.03, 0.1, 110),
         ],
         [
-            UserClassParameters(26, 0.03, 0.5, 1200),
+            UserClassParameters(26, 0.03, 0.5, 120),
             UserClassParameters(33, 0.08, 0.5, 260),
             UserClassParameters(25, 0.07, 1.0, 280),
             UserClassParameters(30, 0.06, 0.6, 250),
@@ -207,6 +245,7 @@ def example_environment(
     return EnvironmentData(
         total_budget=total_budget,
         class_ratios=class_ratios,
+        class_features=class_features,
         product_prices=product_prices,
         classes_parameters=classes_parameters,
         competitor_budget=competitor_budget,
@@ -308,12 +347,14 @@ def _get_interaction(rng, user_class, primary_product, env_data):
     items_bought = np.zeros(5, dtype=np.int8)
 
     # The user goes to the page of the primary_product
-    items_bought = _go_to_page(rng, user_class, primary_product, items_bought, env_data)
+    items_bought, edges = _go_to_page(
+        rng, user_class, primary_product, items_bought, [], env_data
+    )
 
-    return user_class, items_bought
+    return user_class, items_bought, edges
 
 
-def get_day_of_interactions(rng, num_customers, budgets, env_data):
+def get_day_of_interactions(rng, num_customers, budgets, env_data: EnvironmentData):
 
     """Main method to be called when interacting with the environment. Outputs
     all the interactions of an entire day. When called generates new alphas from
@@ -367,7 +408,9 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        click_ratios = np.where(click_ratios == 0, 1e-16, click_ratios)
+        for product in range(len(click_ratios)):
+            if isclose(click_ratios[product], 0.0, rel_tol=1e-10):
+                click_ratios[product] = 2e-16
 
         alpha_ratios = rng.dirichlet(click_ratios)
 
@@ -386,15 +429,24 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data):
         # users are landed on the right and the interaction starts
         for product, ratio in enumerate(product_ratios):
             for _ in range(ratio):
-                user_class, items = _get_interaction(rng, i, product, env_data)
-                total_interactions.append(Interaction(user_class, items, product))
+                user_class, items, edges = _get_interaction(rng, i, product, env_data)
+                feature_idx = rng.integers(len(env_data.class_features[i]))
+                total_interactions.append(
+                    Interaction(
+                        env_data.class_features[i][feature_idx],
+                        user_class,
+                        items,
+                        product,
+                        edges,
+                    )
+                )
 
     # Shuffle the list to make data more realistic
     rng.shuffle(total_interactions)
     return total_interactions
 
 
-def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
+def _go_to_page(rng, user_class, primary_product, items_bought, edges, env_data):
 
     """Shows the user a page of the specified primary products.
 
@@ -440,10 +492,11 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
             < env_data.graph[primary_product, secondary_products[0]]
             and not items_bought[secondary_products[0]]
         ):
+            edges.append((primary_product, secondary_products[0]))
             # Items bought on the opened page are added to the ones bought in
             # the current page
-            items_bought = _go_to_page(
-                rng, user_class, secondary_products[0], items_bought, env_data
+            items_bought, edges = _go_to_page(
+                rng, user_class, secondary_products[0], items_bought, edges, env_data
             )
 
         # Same as before, if the user watches the second slot and clicks on it
@@ -454,8 +507,13 @@ def _go_to_page(rng, user_class, primary_product, items_bought, env_data):
             < env_data.graph[primary_product, secondary_products[1]] * env_data.lam
             and not items_bought[secondary_products[1]]
         ):
-            items_bought = _go_to_page(
-                rng, user_class, secondary_products[1], items_bought, env_data
+            edges.append((primary_product, secondary_products[1]))
+            items_bought, edges = _go_to_page(
+                rng, user_class, secondary_products[1], items_bought, edges, env_data
             )
 
-    return items_bought
+    return items_bought, edges
+
+
+def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteraction]:
+    return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]

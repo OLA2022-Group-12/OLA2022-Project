@@ -11,7 +11,7 @@ from ola2022_project.learners import ClairvoyantLearner
 
 
 @given(
-    step=st.sampled_from(Step).filter(lambda s: s != Step.ZERO),
+    step=st.sampled_from([Step.ONE, Step.TWO, Step.THREE]),
     env=generated_environment(),
 )
 def test_with_masked_environment_variables(step, env):
