@@ -81,7 +81,7 @@ def split_condition(
     )
 
 
-def feature_filter(dataset, features):
+def feature_filter(dataset, features: List[Feature]):
 
     """Filters the elements of a dataset given a set of wanted features.
 
@@ -96,6 +96,9 @@ def feature_filter(dataset, features):
 
     filtered_dataset = []
     for dataset_day in dataset:
+        # Select only the interactions made by users that respect the features specified
+        # in the features parameter, this is done by iterating over every day in the dataset
+        # and every interaction in each day
         filtered_dataset.append(
             list(
                 filter(
@@ -110,12 +113,12 @@ def feature_filter(dataset, features):
 
 
 def feature_split(
-    sim_param: DatasetSimParameters, dataset, context: Context, feature=None
+    sim_param: DatasetSimParameters, dataset, context: Context, feature: Feature = None
 ) -> List[Context]:
 
     """Generates, trains and evaluates over a given dataset new contexts based on a feature split,
     starting from a base context and resulting in a binary split, therefore it creates two new
-    contexts with a dependency on the given feature. If the context and the feature are not
+    contexts with a dependency on the given feature. If the context or the feature are not
     present, the function generates a single new base aggregated context over the dataset.
 
     Arguments:
@@ -135,12 +138,25 @@ def feature_split(
     """
 
     if not context or not feature:
-        pass
-        # TODO base case
+        # Base case for the root of the decision tree, where all features are aggregated
+        # and no split is needed
+        reward = dataset_simulation(sim_param, dataset)
+        # TODO: max expected reward (temporary solution: mean reward over dataset)
+        max_exp_reward = np.mean(reward)
 
+        return Context(
+            [],  # In the base model all features are aggregated
+            np.sum(context.nums),  # All entries in the dataset are considered
+            1,  # Probability = 100%
+            max_exp_reward,
+            compute_weighted_bound(1, max_exp_reward),
+        )
+
+    # Split feature given as parameter
     feature_1 = Feature(feature.feature, 0)
     feature_2 = Feature(feature.feature, 1)
 
+    # Return the two contexts, each evaluating a value of the split feature
     return [
         feature_half_split(sim_param, dataset, context, feature_1),
         feature_half_split(sim_param, dataset, context, feature_2),
@@ -148,7 +164,7 @@ def feature_split(
 
 
 def feature_half_split(
-    sim_param, dataset, context: Context, feature: Feature
+    sim_param: DatasetSimParameters, dataset, context: Context, feature: Feature
 ) -> Context:
 
     """Generates, trains and evaluates over a given dataset a new context based on half of a feature
@@ -169,15 +185,20 @@ def feature_half_split(
         A new context trained and evaluated over the filtered dataset
     """
 
+    # Obtain the filtered dataset over the feature
     dataset_split = feature_filter(dataset, feature)
+    # Count total number of samples for datasets and expected probability of a sample
+    # presenting the feature of interest
     n = np.sum(context.nums)
     n_split = [len(d) for d in dataset_split]
+    exp_prob = n / np.sum(n_split)
+    # Compute resulting set of features
     features = np.concatenate(context.features, feature)
 
-    # reward = dataset_simulation(sim_param, dataset)
-    dataset_simulation(sim_param, dataset)
-    exp_prob = n / np.sum(n_split)
-    max_exp_reward = 0  # TODO: max expected reward
+    # Simulate interactions using the dataset
+    reward = dataset_simulation(sim_param, dataset_split)
+    # TODO: max expected reward (temporary solution: mean reward over dataset)
+    max_exp_reward = np.mean(reward)
 
     return Context(
         features,
@@ -213,7 +234,7 @@ def tree_generation(
         A list containing the contexts chosen by the algorithm
     """
 
-    # Get the base context data
+    # Obtain the base context at the root of the tree
     base_context = feature_split(sim_param, dataset)
     # Start generating tree recursively
     optimal_contexts = generate_tree_node(sim_param, dataset, features, base_context)
