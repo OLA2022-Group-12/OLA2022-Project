@@ -291,7 +291,7 @@ def generate_tree_node(
         map(
             lambda contexts: (
                 contexts,
-                split_condition(contexts, base_context),
+                split_condition(*(contexts), base_context),
             ),
             split_contexts,
         )
@@ -300,7 +300,7 @@ def generate_tree_node(
     # ones that are worth splitting
     # The split_condition is on the right side of the tuple, hence, it is accessed by using [1]
     split_contexts = list(
-        filter(lambda t_contexts_split: t_contexts_split[1] >= 0), split_contexts
+        filter(lambda t_contexts_split: t_contexts_split[1] >= 0, split_contexts)
     )
 
     if split_contexts:
