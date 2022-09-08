@@ -160,11 +160,11 @@ def example_environment(
     class_ratios=[0.3, 0.6, 0.1],
     class_features=[
         [
-            [Feature("feature_1", 0), Feature("feature_1", 0)],
-            [Feature("feature_1", 0), Feature("feature_1", 1)],
+            [Feature("feature_1", 0), Feature("feature_2", 0)],
+            [Feature("feature_1", 0), Feature("feature_2", 1)],
         ],
-        [[Feature("feature_1", 1), Feature("feature_1", 0)]],
-        [[Feature("feature_1", 1), Feature("feature_1", 1)]],
+        [[Feature("feature_1", 1), Feature("feature_2", 0)]],
+        [[Feature("feature_1", 1), Feature("feature_2", 1)]],
     ],
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
