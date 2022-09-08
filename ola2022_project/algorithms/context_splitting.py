@@ -2,17 +2,12 @@ import itertools
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional
-from collections import namedtuple
 from ola2022_project.utils import compute_hoeffding_bound
+from ola2022_project.environment import Feature
 from ola2022_project.simulation import (
     dataset_simulation,
     DatasetSimParameters,
 )
-
-
-# TODO: remove
-# Temporary named tuple utilized to represent a feature in the context generation
-UserFeature = namedtuple("UserFeature", ["feature", "value"])
 
 
 @dataclass
@@ -26,7 +21,7 @@ class Context:
     """
 
     # List of current context features
-    features: List[UserFeature]
+    features: List[Feature]
 
     # Number of samples found in the training dataset for each feature that is
     # relevant to the context
@@ -143,8 +138,8 @@ def feature_split(
         pass
         # TODO base case
 
-    feature_1 = UserFeature(feature.feature, 0)
-    feature_2 = UserFeature(feature.feature, 1)
+    feature_1 = Feature(feature.feature, 0)
+    feature_2 = Feature(feature.feature, 1)
 
     return [
         feature_half_split(sim_param, dataset, context, feature_1),
@@ -153,7 +148,7 @@ def feature_split(
 
 
 def feature_half_split(
-    sim_param, dataset, context: Context, feature: UserFeature
+    sim_param, dataset, context: Context, feature: Feature
 ) -> Context:
 
     """Generates, trains and evaluates over a given dataset a new context based on half of a feature
@@ -194,7 +189,7 @@ def feature_half_split(
 
 
 def tree_generation(
-    sim_param: DatasetSimParameters, dataset, features: List[UserFeature]
+    sim_param: DatasetSimParameters, dataset, features: List[Feature]
 ) -> List[Context]:
 
     """Computes the feature tree for a given dataset and set of features, it utilizes a
@@ -228,7 +223,7 @@ def tree_generation(
 def generate_tree_node(
     sim_param: DatasetSimParameters,
     dataset,
-    unsplit_features: List[UserFeature],
+    unsplit_features: List[Feature],
     base_context: Context,
 ) -> Optional[List[Context]]:
 

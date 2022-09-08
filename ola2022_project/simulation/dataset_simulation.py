@@ -11,7 +11,7 @@ import numpy as np
 # ------------------------------------------ ATTENTION ------------------------------------------ #
 # Temporary and ugly alternative to the classic simulation since it doesn't offer a general
 # interface able to train a learner from an existing dataset; most of the code is copied over from
-# the original file with some minor modification in order to adapt it to the context generation
+# the original file with some minor modifications in order to adapt it to the context generation
 # use case of the simulation.
 # ----------------------------------------------------------------------------------------------- #
 
