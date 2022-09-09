@@ -39,9 +39,7 @@ def _get_aggregated_reward_from_interactions(interactions: List[Interaction], pr
     # First with np.sum() we compute a single array containing how many units we
     # sold for every product. Then the units are multiplied element-wise by the
     # price of the corresponding product
-    reward_per_product = (
-        np.sum(units_sold, axis=0) * prices if len(units_sold) > 0 else np.array([])
-    )
+    reward_per_product = units_sold * prices if len(units_sold) > 0 else np.array([])
 
     # The profit of all the products are summed
     return np.sum(reward_per_product)
@@ -93,6 +91,7 @@ def simulation(
     """
 
     rewards_per_experiment = []
+    dataset_per_experiment = []
 
     masked_env = create_masked_environment(step, env)
 
@@ -107,6 +106,7 @@ def simulation(
             learner = learner_factory(rng, n_budget_steps, masked_env)
 
         collected_rewards = []
+        collected_interactions = []
 
         for day in trange(n_days, desc="day"):
             # Every day, there is a number of new potential customers drawn from a
@@ -135,10 +135,12 @@ def simulation(
             )
 
             collected_rewards.append(rewards)
+            collected_interactions.append(interactions)
 
             # Update learner with new observed reward
             learner.learn(interactions, rewards, budgets)
 
         rewards_per_experiment.append(collected_rewards)
+        dataset_per_experiment.append(collected_interactions)
 
-    return rewards_per_experiment
+    return rewards_per_experiment, dataset_per_experiment
