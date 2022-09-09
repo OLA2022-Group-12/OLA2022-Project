@@ -25,7 +25,7 @@ class Context:
 
     # Number of samples found in the training dataset for each feature that is
     # relevant to the context
-    nums: List[int]
+    nums: int
 
     # Expected appearance probabilities for the feature values identified by the context
     exp_prob: float
@@ -37,21 +37,27 @@ class Context:
     weighted_bound: float
 
 
-def compute_weighted_bound(p: float, mu: float) -> float:
+def compute_weighted_bound(np: int, nmu: int, p: float, mu: float) -> float:
 
     """Computes the probability-weighted lower Hoeffding bound for the expected reward
     of a given probability-expected_reward pair.
 
     Arguments:
-        p: probability
 
-        mu: expected_reward
+        np: number of samples over which the empiric expected probability was calculated upon
+
+        nmu: number of samples over which the empiric expected reward was calculated upon
+
+        p: empiric expected probability
+
+        mu: empiric expected reward
+
 
     Returns:
         Floating value corresponding to the weighted lower bound
     """
 
-    return (p - compute_hoeffding_bound(p)) * (mu - compute_hoeffding_bound(mu))
+    return (p - compute_hoeffding_bound(np)) * (mu - compute_hoeffding_bound(nmu))
 
 
 def split_condition(
@@ -144,17 +150,16 @@ def feature_split(
         # Base case for the root of the decision tree, where all features are aggregated
         # and no split is needed
         reward = dataset_simulation(sim_param, dataset)
+        n = sum([len(d) for d in dataset])
         # TODO: max expected reward (temporary solution: mean reward over dataset)
-        max_exp_reward = np.mean(reward)
+        max_exp_reward = np.mean(sum(reward, []))
 
         return Context(
             [],  # In the base model all features are aggregated
-            np.sum(
-                [len(d) for d in dataset]
-            ),  # All entries in the dataset are considered
+            n,
             1,  # Probability = 100%
             max_exp_reward,
-            compute_weighted_bound(1, max_exp_reward),
+            compute_weighted_bound(n, n, 1, max_exp_reward),
         )
 
     # Split feature given as parameter
@@ -191,12 +196,11 @@ def feature_half_split(
     """
 
     # Obtain the filtered dataset over the feature
-    dataset_split = feature_filter(dataset, feature)
+    dataset_split = feature_filter(dataset, [feature])
     # Count total number of samples for datasets and expected probability of a sample
     # presenting the feature of interest
-    n = np.sum(context.nums)
-    n_split = [len(d) for d in dataset_split]
-    exp_prob = n / np.sum(n_split)
+    n_split = sum([len(d) for d in dataset_split])
+    exp_prob = n_split / context.nums
     # Compute resulting set of features
     features = context.features.copy()
     features.append(feature)
@@ -204,14 +208,14 @@ def feature_half_split(
     # Simulate interactions using the dataset
     reward = dataset_simulation(sim_param, dataset_split)
     # TODO: max expected reward (temporary solution: mean reward over dataset)
-    max_exp_reward = np.mean(reward)
+    max_exp_reward = np.mean(sum(reward, []))
 
     return Context(
         features,
         n_split,
         exp_prob,
         max_exp_reward,
-        compute_weighted_bound(exp_prob, max_exp_reward),
+        compute_weighted_bound(context.nums, n_split, exp_prob, max_exp_reward),
     )
 
 

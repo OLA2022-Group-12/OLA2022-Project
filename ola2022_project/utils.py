@@ -12,7 +12,7 @@ def compute_hoeffding_bound(n, confidence=0.05):
     and the confidence
 
     Arguments:
-        n: number of samples which the empiric values was calculated upon
+        n: number of samples on which the empiric values was calculated upon
 
         confidence: also referred to as delta, corresponds to the error tolerance, therefore
             the bound is taken with a 1 - delta confidence interval

@@ -1,4 +1,4 @@
-import tqdm
+from tqdm.notebook import tqdm_notebook
 from ola2022_project.environment.environment import (
     create_masked_environment,
     Step,
@@ -20,6 +20,13 @@ import numpy as np
 DatasetSimParameters = namedtuple(
     "DatasetSimParameters", ["rng", "env", "learner_factory", "n_budget_steps", "step"]
 )
+
+
+def _get_rewards_from_interactions(interactions: List[Interaction], prices):
+    units_sold = [i.items_bought for i in interactions]
+    return list(
+        map(lambda interaction: np.sum(np.multiply(interaction, prices)), units_sold)
+    )
 
 
 def _get_aggregated_reward_from_interactions(interactions: List[Interaction], prices):
@@ -83,7 +90,7 @@ def dataset_simulation(
 
     collected_rewards = []
 
-    for day_interactions in tqdm.tqdm(dataset, desc="day"):
+    for day_interactions in tqdm_notebook(dataset, desc="day"):
         if day_interactions:
             # Ask the learner to estimate the budgets to assign
             budgets = learner.predict(masked_env)
@@ -92,7 +99,11 @@ def dataset_simulation(
                 day_interactions, sim_param.env.product_prices
             )
 
-            collected_rewards.append(rewards)
+            collected_rewards.append(
+                _get_rewards_from_interactions(
+                    day_interactions, sim_param.env.product_prices
+                )
+            )
 
             # Update learner with new observed reward
             learner.learn(day_interactions, rewards, budgets)
