@@ -102,9 +102,7 @@ class AlphaUnitslessLearner(Learner):
 
         return best_allocation
 
-    def learn(
-        self, interactions: List[Interaction], reward: float, prediction: np.ndarray
-    ):
+    def learn(self, _, reward: float, prediction: np.ndarray):
         for i, p in enumerate(prediction):
             prediction_index = np.where(self.budget_steps == p)[0][0]
             self.product_mabs[i].update(prediction_index, reward)
@@ -122,7 +120,9 @@ class AlphalessLearner(AlphaUnitslessLearner):
     ) -> None:
         super().__init__(rng, n_budget_steps, data, mab_algorithm)
 
-    def learn(self, interactions: List[AggregatedInteraction], prediction: np.ndarray):
+    def learn(
+        self, interactions: List[AggregatedInteraction], _, prediction: np.ndarray
+    ):
         if not isinstance(interactions, list):
             raise RuntimeError(
                 """Alpha-less learner cannot learn from aggregate reward,

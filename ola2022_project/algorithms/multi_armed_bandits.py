@@ -35,11 +35,11 @@ class GPTSLearner(BaseMAB):
         rng,
         n_arms,
         arms,
-        std=5,
+        std=2,
         kernel_range=(1e-2, 1e4),
         kernel_scale=1,
         theta=1.0,
-        l_param=1,
+        l_param=0.1,
     ):
         super().__init__(n_arms)
         self.arms = arms
@@ -52,7 +52,7 @@ class GPTSLearner(BaseMAB):
             Ck(theta, kernel_range) * RBF(l_param, kernel_range) * kernel_scale
         )
         self.gp = GaussianProcessRegressor(
-            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=1
+            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=5
         )
 
     def _update_observations(self, arm_idx, reward):
@@ -61,7 +61,7 @@ class GPTSLearner(BaseMAB):
 
     def _update_model(self):
         x = np.atleast_2d(self.pulled_arms).T
-        y = self.collected_rewards
+        y = self.collected_rewards / 100
         self.gp.fit(x, y)
         self.means, self.sigmas = self.gp.predict(
             np.atleast_2d(self.arms).T, return_std=True
@@ -93,7 +93,7 @@ class GPTSLearner(BaseMAB):
         Returns: a numpy array with n_budget_steps elements containing the
         estimated reward for every step
         """
-        return self.rng.normal(self.means, self.sigmas)
+        return self.rng.normal(self.means * 100, self.sigmas)
 
 
 class GPUCB1Learner(GPTSLearner):
