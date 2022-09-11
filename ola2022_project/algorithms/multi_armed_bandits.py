@@ -2,6 +2,7 @@ import enum
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as Ck
+import warnings
 
 
 class BaseMAB:
@@ -40,6 +41,7 @@ class GPTSLearner(BaseMAB):
         kernel_scale=1,
         theta=1.0,
         l_param=0.1,
+        disable_warnings=True,
     ):
         super().__init__(n_arms)
         self.arms = arms
@@ -54,6 +56,9 @@ class GPTSLearner(BaseMAB):
         self.gp = GaussianProcessRegressor(
             kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=5
         )
+
+        if disable_warnings:
+            warnings.filterwarnings("ignore")
 
     def _update_observations(self, arm_idx, reward):
         super()._update_observations(arm_idx, reward)
