@@ -98,6 +98,11 @@ class GPTSLearner(BaseMAB):
 
 class GPUCB1Learner(GPTSLearner):
     def estimation(self):
+
+        """Computes UCB1 estimations, taking advantage of the GP's confidence
+        interval and modeling it as a confidence bound.
+        """
+
         upper_bounds = self.means + 1.96 * self.sigmas
         return upper_bounds
 

@@ -8,6 +8,7 @@ from ola2022_project.environment.environment import (
     Interaction,
     EnvironmentData,
 )
+from ola2022_project.algorithms.multi_armed_bandits import Mab
 from typing import List
 import numpy as np
 from numpy.random import Generator
@@ -57,6 +58,7 @@ def simulation(
     n_days: int = 100,
     n_budget_steps: int = 5,
     step: Step = Step.ZERO,
+    mab_algorithm: Mab = Mab.GPTS,
 ):
 
     """Runs the simulation for a certain amount of experiments consisting of a
@@ -104,7 +106,9 @@ def simulation(
 
         elif step == Step.ONE or step == Step.TWO:
             # Creation of alphaless learner or graphless learner
-            learner = learner_factory(rng, n_budget_steps, masked_env)
+            learner = learner_factory(
+                rng, n_budget_steps, masked_env, mab_algorithm=mab_algorithm
+            )
 
         collected_rewards = []
 
