@@ -1,4 +1,3 @@
-import itertools
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional
@@ -152,7 +151,7 @@ def feature_split(
         reward = dataset_simulation(sim_param, dataset)
         n = sum([len(d) for d in dataset])
         # TODO: max expected reward (temporary solution: mean reward over dataset)
-        max_exp_reward = np.mean(sum(reward, []))
+        max_exp_reward = np.max(sum(reward, []))
 
         return Context(
             [],  # In the base model all features are aggregated
@@ -195,27 +194,37 @@ def feature_half_split(
         A new context trained and evaluated over the filtered dataset
     """
 
-    # Obtain the filtered dataset over the feature
-    dataset_split = feature_filter(dataset, [feature])
-    # Count total number of samples for datasets and expected probability of a sample
-    # presenting the feature of interest
-    n_split = sum([len(d) for d in dataset_split])
-    exp_prob = n_split / context.nums
     # Compute resulting set of features
     features = context.features.copy()
     features.append(feature)
 
-    # Simulate interactions using the dataset
-    reward = dataset_simulation(sim_param, dataset_split)
-    # TODO: max expected reward (temporary solution: mean reward over dataset)
-    max_exp_reward = np.mean(sum(reward, []))
+    # Obtain the filtered dataset over the feature
+    dataset_split = feature_filter(dataset, features)
+
+    # Count total number of samples for datasets and expected probability of a sample
+    # presenting the feature of interest
+    n_split = sum([len(d) for d in dataset_split])
+    exp_prob = n_split / context.nums
+
+    if n_split:
+        # Simulate interactions using the dataset
+        reward = dataset_simulation(sim_param, dataset_split)
+        # TODO: max expected reward (temporary solution: mean reward over dataset)
+        max_exp_reward = np.max(sum(reward, []))
+        # Compute the weighted bound
+        weighted_bound = compute_weighted_bound(
+            context.nums, n_split, exp_prob, max_exp_reward
+        )
+    else:
+        max_exp_reward = 0
+        weighted_bound = 0
 
     return Context(
         features,
         n_split,
         exp_prob,
         max_exp_reward,
-        compute_weighted_bound(context.nums, n_split, exp_prob, max_exp_reward),
+        weighted_bound,
     )
 
 
@@ -282,6 +291,10 @@ def generate_tree_node(
         A list of "greedy optimal" contexts for the subproblem
     """
 
+    # If there are no more features to split, stop generating the tree
+    if not unsplit_features:
+        return None
+
     # Generate all the possible splits for a single feature
     split_contexts = list(
         map(
@@ -314,8 +327,11 @@ def generate_tree_node(
         )
         # Compute the new set of unsplit features by adding the last feature added to one of the
         # contexts (which one is indifferent, here we chose the first one: index 0)
-        new_features = list(unsplit_features)
-        new_features.remove(best_split[0].features[-1])
+        new_features = [
+            feature
+            for feature in unsplit_features
+            if feature.name != best_split[0].features[-1].name
+        ]
 
         # Helper function to map recursive call results
         def none_context(context, result):
@@ -325,12 +341,12 @@ def generate_tree_node(
         ret_contexts = list(
             map(
                 lambda context: none_context(
-                    generate_tree_node(sim_param, dataset, new_features, context),
                     context,
+                    generate_tree_node(sim_param, dataset, new_features, context),
                 ),
                 best_split,
             )
         )
         # Return flattened list
-        return list(itertools.chain(*ret_contexts))
+        return ret_contexts
     return None
