@@ -2,6 +2,7 @@ from typing import List
 from abc import ABC, abstractmethod
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from ola2022_project.environment.environment import MaskedEnvironmentData, Interaction
 
@@ -49,4 +50,14 @@ class Learner(ABC):
             obtained by the learner until now
         """
 
+        pass
+
+    @abstractmethod
+    def show_progress(self, fig: plt.Figure):
+
+        """Creates a figure and plots showing the status of learning progress
+
+        Arguments:
+            fig: a matplotlib figure which will be filled with subplots/plots
+        """
         pass

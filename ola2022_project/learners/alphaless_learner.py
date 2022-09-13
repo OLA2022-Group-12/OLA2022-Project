@@ -1,5 +1,6 @@
 from typing import List
 import numpy as np
+import matplotlib.pyplot as plt
 
 from ola2022_project.environment.environment import MaskedEnvironmentData, Interaction
 from ola2022_project.learners import Learner
@@ -90,3 +91,7 @@ class AlphalessLearner(Learner):
         for i, p in enumerate(prediction):
             prediction_index = np.where(self.budget_steps == p)[0][0]
             self.product_mabs[i].update(prediction_index, reward)
+
+    def show_progress(self, fig: plt.Figure):
+        # TODO add plots which show the GP process
+        pass
