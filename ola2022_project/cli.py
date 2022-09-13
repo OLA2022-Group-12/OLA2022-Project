@@ -6,7 +6,11 @@ import matplotlib.pyplot as plt
 from ola2022_project import LoggingConfiguration
 from ola2022_project.environment.environment import example_environment, Step
 from ola2022_project.simulation.simulation import simulation as run_simulation
-from ola2022_project.learners import ClairvoyantLearner, StupidLearner  # noqa
+from ola2022_project.learners import (  # noqa
+    ClairvoyantLearner,
+    StupidLearner,
+    GraphlessLearner,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +37,12 @@ def simulation(verbose, n_experiments, n_days):
     rewards_per_experiment = run_simulation(
         rng=rng,
         env=env,
-        learner_factory=StupidLearner,
+        learner_factory=GraphlessLearner,
         n_customers_mean=10,
         n_customers_variance=1,
         n_days=n_days,
         n_experiment=n_experiments,
-        step=Step.ZERO,
+        step=Step.THREE,
     )
     logger.debug(f"Rewards per experiment: {rewards_per_experiment}")
 
