@@ -75,10 +75,6 @@ class GraphlessLearner(Learner):
         return graph
 
     def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
-        # TODO remove this when implemented
-        # return np.full(
-        #    (1, len(data.product_prices)), data.total_budget / len(data.product_prices)
-        # )
         budget_steps = np.linspace(0, data.total_budget, self.n_budget_steps)
 
         # Sample current estimation of graph
