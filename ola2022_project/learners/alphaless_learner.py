@@ -3,7 +3,11 @@ import numpy as np
 
 from ola2022_project.environment.environment import MaskedEnvironmentData, Interaction
 from ola2022_project.learners import Learner
-from ola2022_project.algorithms.multi_armed_bandits import GPTSLearner, Mab
+from ola2022_project.algorithms.multi_armed_bandits import (
+    GPTSLearner,
+    GPUCB1Learner,
+    Mab,
+)
 from ola2022_project.optimization import budget_assignment
 
 
@@ -63,8 +67,10 @@ class AlphalessLearner(Learner):
             ]
 
         elif mab_algorithm == Mab.GPUCB1:
-            # TODO: Implement GPUCB1
-            pass
+            self.product_mabs = [
+                GPUCB1Learner(rng, self.n_budget_steps, normalized_budget_steps)
+                for _ in range(self.n_products)
+            ]
 
     def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
         aggregated_budget_value_matrix = [
