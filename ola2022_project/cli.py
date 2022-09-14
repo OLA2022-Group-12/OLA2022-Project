@@ -24,7 +24,13 @@ def main():
 @click.option("--verbose", "-v", is_flag=True, help="enable debug loggin")
 @click.option("--n_experiments", default=1, help="number of experiments to run")
 @click.option("--n_days", default=100, help="number of days for each experiment to run")
-def simulation(verbose, n_experiments, n_days):
+@click.option(
+    "--show_progress_graphs",
+    "-s",
+    is_flag=True,
+    help="show graphs of the learning progress",
+)
+def simulation(verbose, n_experiments, n_days, show_progress_graphs):
     # Setup logging, this could be changed to log to file or similar
     LoggingConfiguration("DEBUG" if verbose else "INFO")
 
@@ -42,8 +48,8 @@ def simulation(verbose, n_experiments, n_days):
         n_customers_variance=1,
         n_days=n_days,
         n_experiment=n_experiments,
-        step=Step.THREE,
-        show_progress_graphs=True,
+        step=Step.ZERO,
+        show_progress_graphs=show_progress_graphs,
     )
     logger.debug(f"Rewards per experiment: {rewards_per_experiment}")
 

@@ -1,6 +1,7 @@
 from ola2022_project.learners.learner import Learner
 from ola2022_project.environment.environment import MaskedEnvironmentData
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class StupidLearner(Learner):
@@ -18,3 +19,6 @@ class StupidLearner(Learner):
         return np.full(
             (1, len(data.product_prices)), data.total_budget / len(data.product_prices)
         )
+
+    def show_progress(self, fig: plt.Figure):
+        pass
