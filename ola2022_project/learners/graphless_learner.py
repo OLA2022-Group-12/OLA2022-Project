@@ -176,6 +176,9 @@ class GraphlessLearner(Learner):
                 # ax.set_ylim(0.0, 1.0)
                 ax.set_xlim(0.0, 1.0)
                 ax.plot(xs, beta.pdf(xs, alpha_v, beta_v))
-                ax.set_title(f"({alpha_v}, {beta_v})")
+                ax.set_title(f"{x} -> {y}")
 
-        return fig, axss
+        fig.set_tight_layout(True)
+        fig.suptitle(
+            "Probability distributions of adjacency matrix\n(edge between product x -> y)"
+        )
