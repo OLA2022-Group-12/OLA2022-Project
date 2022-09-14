@@ -56,9 +56,6 @@ class GraphlessLearner(Learner):
 
         self.next_products = data.next_products
 
-        # self.alpha_param = rng.normal(10, 3, (self.n_products, self.n_products))
-        # self.beta_param = rng.normal(10, 3, (self.n_products, self.n_products))
-
     def graph_estimation(self) -> np.ndarray:
         # Sample current estimation of graph
         graph = self.rng.beta(self.alpha_param, self.beta_param)
@@ -92,7 +89,7 @@ class GraphlessLearner(Learner):
                 for user_class in data.classes_parameters
             ]
         )
-        # TODO How to do this aggregation, is this appropriate?
+
         product_graph_landing_values = np.sum(
             product_graph_landing_values_for_each_user, axis=0
         ) / np.sum(product_graph_landing_values_for_each_user)
