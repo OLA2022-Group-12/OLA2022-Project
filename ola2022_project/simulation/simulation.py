@@ -12,6 +12,7 @@ from ola2022_project.algorithms.multi_armed_bandits import Mab
 from typing import List
 import numpy as np
 from numpy.random import Generator
+import matplotlib.pyplot as plt
 
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ def simulation(
     n_budget_steps: int = 5,
     step: Step = Step.ZERO,
     mab_algorithm: Mab = Mab.GPTS,
+    show_progress_graphs: bool = False,
 ):
 
     """Runs the simulation for a certain amount of experiments consisting of a
@@ -142,6 +144,11 @@ def simulation(
 
             # Update learner with new observed reward
             learner.learn(interactions, rewards, budgets)
+
+            if show_progress_graphs:
+                fig = plt.figure()
+                learner.show_progress(fig)
+                plt.show(block=True)
 
         rewards_per_experiment.append(collected_rewards)
 
