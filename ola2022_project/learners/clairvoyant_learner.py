@@ -8,6 +8,7 @@ from ola2022_project.environment.environment import (
 )
 from ola2022_project.optimization import budget_assignment
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 logger = logging.getLogger(__name__)
@@ -85,3 +86,6 @@ class ClairvoyantLearner(Learner):
         )
 
         return best_allocation
+
+    def show_progress(self, fig: plt.Figure):
+        pass
