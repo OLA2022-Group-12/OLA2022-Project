@@ -43,6 +43,7 @@ def simulation(verbose, n_experiments, n_days):
         n_days=n_days,
         n_experiment=n_experiments,
         step=Step.THREE,
+        show_progress_graphs=True,
     )
     logger.debug(f"Rewards per experiment: {rewards_per_experiment}")
 
