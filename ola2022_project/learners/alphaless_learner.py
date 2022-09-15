@@ -3,7 +3,6 @@ import numpy as np
 from ola2022_project.environment.environment import (
     AggregatedInteraction,
     MaskedEnvironmentData,
-    Step,
 )
 from ola2022_project.learners import Learner
 from ola2022_project.algorithms.multi_armed_bandits import (
@@ -12,21 +11,7 @@ from ola2022_project.algorithms.multi_armed_bandits import (
     Mab,
 )
 from ola2022_project.optimization import budget_assignment
-
-
-def create_alphaless_learner(
-    rng, step: Step, n_budget_steps, data: MaskedEnvironmentData, mab_algorithm=Mab.GPTS
-):
-    if step == Step.ONE:
-        return AlphaUnitslessLearner(rng, n_budget_steps, data, mab_algorithm)
-
-    elif step == Step.TWO:
-        return AlphalessLearner(rng, n_budget_steps, data, mab_algorithm)
-
-    else:
-        raise RuntimeError(
-            "Cannot create alphaless learner with the Step provided. Step must be ONE or TWO"
-        )
+import matplotlib.pyplot as plt
 
 
 class AlphaUnitslessLearner(Learner):
@@ -106,6 +91,9 @@ class AlphaUnitslessLearner(Learner):
         for i, p in enumerate(prediction):
             prediction_index = np.where(self.budget_steps == p)[0][0]
             self.product_mabs[i].update(prediction_index, reward)
+
+    def show_progress(self, fig: plt.Figure):
+        pass
 
 
 class AlphalessLearner(AlphaUnitslessLearner):

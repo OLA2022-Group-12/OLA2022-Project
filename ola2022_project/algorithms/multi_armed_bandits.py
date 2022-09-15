@@ -112,7 +112,7 @@ class GPUCB1Learner(GPTSLearner):
         interval and modeling it as a confidence bound.
         """
 
-        upper_bounds = self.means + 1.96 * self.sigmas
+        upper_bounds = (self.means + 1.96 * self.sigmas) * self.normalize_factor
         return upper_bounds
 
 
