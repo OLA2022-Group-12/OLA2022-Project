@@ -1,6 +1,6 @@
 import logging
 from aenum import Enum, NoAlias
-import logging
+
 from typing import Optional, List, Tuple
 from math import isclose
 from collections import namedtuple
