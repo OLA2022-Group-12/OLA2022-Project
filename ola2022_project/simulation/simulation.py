@@ -1,4 +1,6 @@
 import logging
+from ola2022_project.learners.graphless_learner import GraphlessLearner
+from ola2022_project.learners.learner import Learner
 
 from tqdm.notebook import trange
 from ola2022_project.environment.environment import (
@@ -104,13 +106,18 @@ def simulation(
 
         if step == Step.ZERO:
             # Creation of clairovyant learner or stupid learner
-            learner = learner_factory(n_budget_steps)
+            learner: Learner = learner_factory(n_budget_steps)
 
         elif step == Step.ONE or step == Step.TWO:
-            # Creation of alphaless learner or graphless learner
-            learner = learner_factory(
+            # Creation of alphaless learner
+            learner: Learner = learner_factory(
                 rng, n_budget_steps, masked_env, mab_algorithm=mab_algorithm
             )
+        elif step == Step.THREE:
+            # Creation of graphless learner
+            learner: Learner = learner_factory(rng, n_budget_steps, masked_env)
+        else:
+            raise NotImplementedError(f"cannot handle step {step} yet")
 
         collected_rewards = []
 
@@ -145,7 +152,7 @@ def simulation(
             # Update learner with new observed reward
             learner.learn(interactions, rewards, budgets)
 
-            if show_progress_graphs:
+            if isinstance(learner, GraphlessLearner) and show_progress_graphs:
                 fig = plt.figure()
                 learner.show_progress(fig)
                 plt.show(block=True)

@@ -1,10 +1,16 @@
 from typing import List, Tuple
 
-from ola2022_project.environment.environment import EnvironmentData
+import numpy as np
+from numpy.typing import NDArray
 
 
 def get_all_interaction_from_node(
-    primary_product: int, user_class: int, env_data: EnvironmentData
+    primary_product: int,
+    graph: NDArray[np.float32],
+    product_prices: List[float],
+    reservation_prices: List[float],
+    next_products: List[Tuple[int, int]],
+    lam: float,
 ) -> float:
     """
     Calculates the average price of purchases
@@ -13,9 +19,16 @@ def get_all_interaction_from_node(
     Arguments:
       primary_product: integer representing the primary product (starting node)
 
-      user_class: integer representing user's class
+      graph: an (NxN) matrix which represents the weights between the product nodes in the graph
 
-      env_data: instance of EnvironmentData
+      product_prices: a list of N product prices of the given products
+
+      reservation_prices: a list of N reservation prices which determine wether
+                          a product is bought
+
+      next_products: a list of N secondary products to a product
+
+      lam: the probability multiplier of the second slot
 
     Returns:
       A float representing the average money spent by a customer starting from a node
@@ -25,7 +38,7 @@ def get_all_interaction_from_node(
     history = [[primary_product]]
     newhistory = []
 
-    price_history = [[env_data.product_prices[primary_product]]]
+    price_history = [[product_prices[primary_product]]]
     newprice_history = []
 
     # The algorithm is repeated until all possibilities have been explored.
@@ -39,7 +52,14 @@ def get_all_interaction_from_node(
         # For each path, we see if we can extend them by
         # looking if there are still secondary products possible.
         for i in range(len(history)):
-            next_, expected_income = get_next_product(history[i], user_class, env_data)
+            next_, expected_income = get_next_product(
+                history[i],
+                graph,
+                product_prices,
+                reservation_prices,
+                next_products,
+                lam,
+            )
 
             # This particular path cannot be extended
             if len(next_) == 0:
@@ -67,7 +87,12 @@ def get_all_interaction_from_node(
 
 
 def get_next_product(
-    current_path: List[int], user_class: int, env_data: EnvironmentData
+    current_path: List[int],
+    graph: NDArray[np.float32],
+    product_prices: List[float],
+    reservation_prices: List[float],
+    next_products: List[Tuple[int, int]],
+    lam: float,
 ) -> Tuple[List[int], List[int]]:
 
     """
@@ -79,9 +104,16 @@ def get_next_product(
     Arguments:
       current_path: List containing products already displayed as primary product.
 
-      user_class: integer representing user's class
+      graph: an (NxN) matrix which represents the weights between the product nodes in the graph
 
-      env_data: instance of EnvironmentData
+      product_prices: a list of N product prices of the given products
+
+      reservation_prices: a list of N reservation prices which determine wether
+                          a product is bought
+
+      next_products: a list of N secondary products to a product
+
+      lam: the probability multiplier of the second slot
 
     Returns:
       Tuple of Lists :
@@ -91,18 +123,14 @@ def get_next_product(
     """
 
     primary_product = current_path[-1]
-    secondary_products = env_data.next_products[primary_product]
+    secondary_products = next_products[primary_product]
     secondary_prices = [
-        env_data.product_prices[secondary_products[0]],
-        env_data.product_prices[secondary_products[1]],
+        product_prices[secondary_products[0]],
+        product_prices[secondary_products[1]],
     ]
     user_reservation_prices = [
-        env_data.classes_parameters[user_class][
-            secondary_products[0]
-        ].reservation_price,
-        env_data.classes_parameters[user_class][
-            secondary_products[1]
-        ].reservation_price,
+        reservation_prices[secondary_products[0]],
+        reservation_prices[secondary_products[1]],
     ]
 
     next_ = []
@@ -117,7 +145,7 @@ def get_next_product(
     ):
         next_.append(secondary_products[0])
         expected_income.append(
-            secondary_prices[0] * env_data.graph[primary_product, secondary_products[0]]
+            secondary_prices[0] * graph[primary_product, secondary_products[0]]
         )
 
     # Checks if the price of the second secondary product is under the reservation
@@ -130,28 +158,47 @@ def get_next_product(
         next_.append(secondary_products[1])
         expected_income.append(
             secondary_prices[1]
-            * env_data.graph[primary_product, secondary_products[1]]
-            * env_data.lam  # NB! This is the difference between the two ifs
+            * graph[primary_product, secondary_products[1]]
+            * lam  # NB! This is the difference between the two ifs
         )
 
     return (next_, expected_income)
 
 
 def get_expected_value_per_node(
-    user_class: int, env_data: EnvironmentData
+    graph: NDArray[np.float32],
+    product_prices: List[float],
+    reservation_prices: List[float],
+    next_products: List[Tuple[int, int]],
+    lam: float,
 ) -> List[float]:
     """
     Calculates the expected money per node
 
     Arguments:
-        user_class: integer representing user's class
-        env_data: instance of Environment_data
+      graph: an (NxN) matrix which represents the weights between the product nodes in the graph
+
+      product_prices: a list of N product prices of the given products
+
+      reservation_prices: a list of N reservation prices which determine wether
+                          a product is bought
+
+      next_products: a list of N secondary products to a product
+
+      lam: the probability multiplier of the second slot
 
     Returns:
         A list with expected money spent by a user starting from node i
     """
     reward_per_seed = [
-        get_all_interaction_from_node(seed, user_class, env_data)
-        for seed, _ in enumerate(env_data.product_prices)
+        get_all_interaction_from_node(
+            seed,
+            graph,
+            product_prices,
+            reservation_prices,
+            next_products,
+            lam,
+        )
+        for seed, _ in enumerate(product_prices)
     ]
     return reward_per_seed
