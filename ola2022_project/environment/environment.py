@@ -36,11 +36,6 @@ AggregatedInteraction = namedtuple(
     "AggregatedInteraction", ["items_bought", "landed_on"]
 )
 
-# Similar to Interaction but doesn't cointain any reference to a user class
-AggregatedInteraction = namedtuple(
-    "AggregatedInteraction", ["items_bought", "landed_on"]
-)
-
 
 class Step(Enum):
 
