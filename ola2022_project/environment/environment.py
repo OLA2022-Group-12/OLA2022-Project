@@ -6,6 +6,7 @@ from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
+from ola2022_project.utils import compute_alphas
 
 
 """The correct use of this module is to construct the class
@@ -256,7 +257,7 @@ def example_environment(
     )
 
 
-def alpha_function(budget, steepness, shift, upper_bound):
+def alpha_function(budget, upper_bound, max_useful_budget):
 
     """Alpha function with the shape of a sigmoidal function. Computes the
     expected value of clicks given a certain budget.
@@ -264,20 +265,20 @@ def alpha_function(budget, steepness, shift, upper_bound):
     Arguments:
         budget: integer or float representing the budget
 
-        steepness: float representing the steepness of the sigmoidal curve
-
-        shift: float representing the shift of the entire function. The shift
-            should always be positive and not smaller than 3 circa
-
-        upper_bound: integer representing the maximum expected number of \
+        upper_bound: integer representing the maximum expected number of
             clicks possible
+
+        max_useful_budget: maximum amount of budget after which increasing
+            the budget won't lead to a ratio increase
 
     Returns:
         A float representing the expected value of number of clicks for a
         certain class function
     """
 
-    return np.maximum(0, upper_bound * (1 - np.exp(-steepness * budget + shift)))
+    steepness = 4 / max_useful_budget
+
+    return np.maximum(0, upper_bound * (1 - np.exp(-steepness * budget)))
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
@@ -354,7 +355,13 @@ def _get_interaction(rng, user_class, primary_product, env_data):
     return user_class, items_bought, edges
 
 
-def get_day_of_interactions(rng, num_customers, budgets, env_data: EnvironmentData):
+def get_day_of_interactions(
+    rng: np.random.default_rng,
+    population,
+    budgets,
+    env_data: EnvironmentData,
+    de_noise=50,
+):
 
     """Main method to be called when interacting with the environment. Outputs
     all the interactions of an entire day. When called generates new alphas from
@@ -378,62 +385,61 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data: EnvironmentDa
         represents how many of the products i+1 the customer bought
     """
 
-    # Competitor budget is added to the array of budgets
-    budgets = np.insert(budgets, 0, env_data.competitor_budget)
+    n_classes = len(env_data.class_ratios)
 
     # Computing total number of customers for each class based on class_ratios
-    customers_of_class_1 = int(num_customers * env_data.class_ratios[0])
-    customers_of_class_2 = int(num_customers * env_data.class_ratios[1])
-    customers_of_class_3 = num_customers - customers_of_class_1 - customers_of_class_2
+    customers_of_class_1 = int(population * env_data.class_ratios[0])
+    customers_of_class_2 = int(population * env_data.class_ratios[1])
+    customers_of_class_3 = population - customers_of_class_1 - customers_of_class_2
     customers_per_class = [
         customers_of_class_1,
         customers_of_class_2,
         customers_of_class_3,
     ]
 
+    # If the budgets array is 1-dimensional it means that we are optimizing for a
+    # single context (no splitting has appened)
+    if len(np.shape(budgets)) == 1:
+        budget_allocation = np.array(
+            [np.array(budgets) / n_classes for _ in range(n_classes)]
+        )
+
+    # If the array is 2-dimensional it means that we are optimizing for more than
+    # one context
+    # TODO fix this, not correct
+    elif len(np.shape(budget_allocation)) == 2:
+        budget_allocation = np.array(budgets)
+
+    else:
+        raise RuntimeError(f"Invalid budget shape: {np.shape(budgets)}")
+
     total_interactions = list()
 
-    # For every class, product ratios are computed
-    for i in range(3):
-
-        click_ratios = [
-            alpha_function(
-                budgets[j],
-                env_data.classes_parameters[i][j].steepness,
-                env_data.classes_parameters[i][j].shift,
-                env_data.classes_parameters[i][j].upper_bound,
-            )
-            for j in range(len(budgets))
-        ]
+    for user_class, class_population, class_parameters, assigned_budget in enumerate(
+        zip(customers_per_class, env_data.classes_parameters, budget_allocation)
+    ):
+        alpha_ratios = compute_alphas(class_parameters, assigned_budget)
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        for product in range(len(click_ratios)):
-            if isclose(click_ratios[product], 0.0, rel_tol=1e-10):
-                click_ratios[product] = 2e-16
+        for ratio in range(len(alpha_ratios)):
+            if isclose(alpha_ratios[ratio], 0.0, rel_tol=1e-10):
+                alpha_ratios[ratio] = 2e-16
 
-        alpha_ratios = rng.dirichlet(click_ratios)
-
-        # This array will contain how many customers will land on a certain
-        # product page, excluding the competitor page, which corresponds to the
-        # first ratio
-        product_ratios = [
-            int(alpha_ratios[1] * customers_per_class[i]),
-            int(alpha_ratios[2] * customers_per_class[i]),
-            int(alpha_ratios[3] * customers_per_class[i]),
-            int(alpha_ratios[4] * customers_per_class[i]),
-            int(alpha_ratios[5] * customers_per_class[i]),
-        ]
+        alpha_ratios = rng.dirichlet(alpha_ratios * de_noise)
+        users_landing_on_pages = np.delete(alpha_ratios, -1) * class_population
 
         # According to product ratios, for every product the computed number on
         # users are landed on the right and the interaction starts
-        for product, ratio in enumerate(product_ratios):
-            for _ in range(ratio):
-                user_class, items, edges = _get_interaction(rng, i, product, env_data)
-                feature_idx = rng.integers(len(env_data.class_features[i]))
+        for product, n_users in enumerate(users_landing_on_pages):
+            for _ in range(n_users):
+                user_class, items, edges = _get_interaction(
+                    rng, user_class, product, env_data
+                )
+                feature_idx = rng.integers(len(env_data.class_features[user_class]))
                 total_interactions.append(
                     Interaction(
-                        env_data.class_features[i][feature_idx],
+                        env_data.class_features[user_class][feature_idx],
                         user_class,
                         items,
                         product,
