@@ -2,6 +2,7 @@ import enum
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as Ck
+import warnings
 
 
 class BaseMAB:
@@ -35,11 +36,13 @@ class GPTSLearner(BaseMAB):
         rng,
         n_arms,
         arms,
-        std=10,
+        std=1,
         kernel_range=(1e-2, 1e4),
         kernel_scale=1,
         theta=1.0,
-        l_param=10,
+        l_param=0.1,
+        normalize_factor=100,
+        disable_warnings=True,
     ):
         super().__init__(n_arms)
         self.arms = arms
@@ -48,12 +51,16 @@ class GPTSLearner(BaseMAB):
         self.pulled_arms = list()
         self.alpha = std
         self.rng = rng
+        self.normalize_factor = normalize_factor
         self.kernel = (
             Ck(theta, kernel_range) * RBF(l_param, kernel_range) * kernel_scale
         )
         self.gp = GaussianProcessRegressor(
-            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=2
+            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=5
         )
+
+        if disable_warnings:
+            warnings.filterwarnings("ignore")
 
     def _update_observations(self, arm_idx, reward):
         super()._update_observations(arm_idx, reward)
@@ -61,7 +68,7 @@ class GPTSLearner(BaseMAB):
 
     def _update_model(self):
         x = np.atleast_2d(self.pulled_arms).T
-        y = self.collected_rewards
+        y = self.collected_rewards / self.normalize_factor
         self.gp.fit(x, y)
         self.means, self.sigmas = self.gp.predict(
             np.atleast_2d(self.arms).T, return_std=True
@@ -93,7 +100,9 @@ class GPTSLearner(BaseMAB):
         Returns: a numpy array with n_budget_steps elements containing the
         estimated reward for every step
         """
-        return self.rng.normal(self.means, self.sigmas)
+        return self.rng.normal(
+            self.means * self.normalize_factor, self.sigmas * self.normalize_factor
+        )
 
 
 class GPUCB1Learner(GPTSLearner):
@@ -103,7 +112,7 @@ class GPUCB1Learner(GPTSLearner):
         interval and modeling it as a confidence bound.
         """
 
-        upper_bounds = self.means + 1.96 * self.sigmas
+        upper_bounds = (self.means + 1.96 * self.sigmas) * self.normalize_factor
         return upper_bounds
 
 

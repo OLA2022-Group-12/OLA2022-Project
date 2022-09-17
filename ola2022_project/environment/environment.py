@@ -1,5 +1,6 @@
 import logging
 from aenum import Enum, NoAlias
+
 from typing import Optional, List, Tuple
 from math import isclose
 from collections import namedtuple
@@ -517,3 +518,11 @@ def _go_to_page(rng, user_class, primary_product, items_bought, edges, env_data)
 
 def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteraction]:
     return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]
+
+
+def find_optimal_budget(env: EnvironmentData) -> np.ndarray:
+    pass
+
+
+def compute_maximum_reward(env: EnvironmentData) -> int:
+    pass
