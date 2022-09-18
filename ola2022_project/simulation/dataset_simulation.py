@@ -22,11 +22,25 @@ DatasetSimParameters = namedtuple(
 )
 
 
-def _get_rewards_from_interactions(interactions: List[Interaction], prices):
+def _get_reward_from_interactions(interactions: List[Interaction], prices):
+
+    # Creates a list contaninig only the number of units every customer bought
+    # for each product
+    units_sold_np = np.array([i.items_bought for i in interactions])
     units_sold = [i.items_bought for i in interactions]
-    return list(
+
+    # First with np.sum() we compute a single array containing how many units we
+    # sold for every product. Then the units are multiplied element-wise by the
+    # price of the corresponding product
+    reward_per_product_agg = (
+        units_sold_np * prices if len(units_sold) > 0 else np.array([])
+    )
+    reward_per_product = list(
         map(lambda interaction: np.sum(np.multiply(interaction, prices)), units_sold)
     )
+
+    # The profit of all the products are summed
+    return np.sum(reward_per_product_agg), reward_per_product
 
 
 def _get_aggregated_reward_from_interactions(interactions: List[Interaction], prices):
@@ -47,12 +61,12 @@ def _get_aggregated_reward_from_interactions(interactions: List[Interaction], pr
 
     # Creates a list contaninig only the number of units every customer bought
     # for each product
-    units_sold = [i.items_bought for i in interactions]
+    units_sold = np.array([i.items_bought for i in interactions])
 
     # First with np.sum() we compute a single array containing how many units we
     # sold for every product. Then the units are multiplied element-wise by the
     # price of the corresponding product
-    reward_per_product = np.sum(units_sold, axis=0) * prices
+    reward_per_product = units_sold * prices if len(units_sold) > 0 else np.array([])
 
     # The profit of all the products are summed
     return np.sum(reward_per_product)
@@ -95,17 +109,15 @@ def dataset_simulation(
             # Ask the learner to estimate the budgets to assign
             budgets = learner.predict(masked_env)
 
-            rewards = _get_aggregated_reward_from_interactions(
+            # TODO: understand which reward to pass to the learner and which reward
+            # return from the simulation
+            agg_rewards, rewards = _get_reward_from_interactions(
                 day_interactions, sim_param.env.product_prices
             )
 
-            collected_rewards.append(
-                _get_rewards_from_interactions(
-                    day_interactions, sim_param.env.product_prices
-                )
-            )
+            collected_rewards.append(rewards)
 
             # Update learner with new observed reward
-            learner.learn(day_interactions, rewards, budgets)
+            learner.learn(day_interactions, agg_rewards, budgets)
 
     return collected_rewards

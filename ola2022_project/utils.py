@@ -6,6 +6,19 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+def flatten_list(input_list):
+    flat_list = []
+    # Iterate through the outer list
+    for element in input_list:
+        if isinstance(element, list):
+            # If the element is of type list, iterate through the sublist
+            for item in element:
+                flat_list.append(item)
+        else:
+            flat_list.append(element)
+    return flat_list
+
+
 def compute_hoeffding_bound(n, confidence=0.05):
 
     """Computes the Hoeffding bound for an empiric value given the number of samples
