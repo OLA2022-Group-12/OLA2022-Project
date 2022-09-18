@@ -9,7 +9,7 @@ class StupidLearner(Learner):
     doesn't update its prediction.
     """
 
-    def __init__(self, _=True) -> None:
+    def __init__(self) -> None:
         pass
 
     def learn(self, interactions, reward, prediction):

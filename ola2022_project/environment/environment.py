@@ -41,6 +41,7 @@ class Step(Enum):
 
     _settings_ = NoAlias
 
+    CLAIRVOYANT = ()
     ZERO = ()
     ONE = ("classes_parameters",)
     TWO = ("classes_parameters",)
