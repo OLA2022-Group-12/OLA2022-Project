@@ -75,10 +75,6 @@ class EnvironmentData:
     # every product
     classes_parameters: List[List[UserClassParameters]]
 
-    # The competitor budget is assumed to be constant, since the competitor is
-    # non-strategic
-    competitor_budget: int
-
     # Lambda parameter, which is the probability of osserving the next secondary product
     # according to the project's assignment
     lam: float
@@ -115,10 +111,6 @@ class MaskedEnvironmentData:
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
     next_products: List[Tuple[int, int]]
-
-    # The competitor budget is assumed to be constant, since the competitor is
-    # non-strategic
-    competitor_budget: Optional[int] = None
 
     # Max number of items a customer can buy of a certain product. The number of
     # bought items is determined randomly with max_items as upper bound
@@ -190,7 +182,6 @@ def example_environment(
             UserClassParameters(36, 0.1, 70),
         ],
     ],
-    competitor_budget=100,
     lam=0.5,
     max_items=3,
     graph_fully_connected=True,
@@ -245,7 +236,6 @@ def example_environment(
         class_features=class_features,
         product_prices=product_prices,
         classes_parameters=classes_parameters,
-        competitor_budget=competitor_budget,
         lam=lam,
         max_items=max_items,
         graph=graph,
@@ -384,14 +374,13 @@ def get_day_of_interactions(
     n_classes = len(env_data.class_ratios)
 
     # Computing total number of customers for each class based on class_ratios
-    customers_of_class_1 = int(population * env_data.class_ratios[0])
-    customers_of_class_2 = int(population * env_data.class_ratios[1])
-    customers_of_class_3 = population - customers_of_class_1 - customers_of_class_2
     customers_per_class = [
-        customers_of_class_1,
-        customers_of_class_2,
-        customers_of_class_3,
+        int(np.rint(population * ratio)) for ratio in env_data.class_ratios
     ]
+
+    logger.debug(
+        f"Population divided between classes as follows: {customers_per_class}"
+    )
 
     # If the budgets array is 1-dimensional it means that we are optimizing for a
     # single context (no splitting has appened)
@@ -399,10 +388,11 @@ def get_day_of_interactions(
         budget_allocation = np.array(
             [np.array(budgets) / n_classes for _ in range(n_classes)]
         )
+        logger.debug("Targeting 1 context in current environment")
 
     # If the array is 2-dimensional it means that we are optimizing for more than
     # one context
-    # TODO fix this, not correct
+    # TODO implement this
     elif len(np.shape(budget_allocation)) == 2:
         budget_allocation = np.array(budgets)
         raise RuntimeError(
@@ -414,6 +404,7 @@ def get_day_of_interactions(
 
     total_interactions = list()
 
+    # Generate interactions for every class
     for user_class, (class_population, class_parameters, assigned_budget) in enumerate(
         zip(customers_per_class, env_data.classes_parameters, budget_allocation)
     ):
@@ -422,9 +413,18 @@ def get_day_of_interactions(
             alpha_function(product_budget, params.upper_bound, params.max_useful_budget)
             for params, product_budget in zip(class_parameters, assigned_budget)
         ]
+
+        competitor_ratio = 1 - np.sum(alpha_ratios)
+
+        if competitor_ratio < 0:
+            raise RuntimeError("Bad alpha-function parameters, total ratio ecceeds 1")
+
+        alpha_ratios.append(competitor_ratio)
+
+        logger.debug(f"Computed alpha ratios: {alpha_ratios}")
+
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        # print(alpha_ratios)
         for ratio in range(len(alpha_ratios)):
             if isclose(alpha_ratios[ratio], 0.0, rel_tol=1e-10):
                 alpha_ratios[ratio] = 2e-16
@@ -433,6 +433,10 @@ def get_day_of_interactions(
         users_landing_on_pages = np.rint(
             np.delete(alpha_ratios_noisy, -1) * class_population
         ).astype(int)
+
+        logger.debug(
+            f"Dirichlet output (doesn't include competitor): {alpha_ratios_noisy}"
+        )
 
         # According to product ratios, for every product the computed number on
         # users are landed on the right and the interaction starts
