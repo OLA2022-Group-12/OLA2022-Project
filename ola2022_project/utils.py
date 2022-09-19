@@ -107,3 +107,7 @@ def calculate_aggregated_budget_value(
     )
 
     return aggregated_budget_value
+
+
+def compute_alphas(class_parameters, assigned_budget):
+    pass
