@@ -7,7 +7,6 @@ from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
-from ola2022_project.utils import compute_alphas
 
 
 """The correct use of this module is to construct the class
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Named tuple containing the fundamental parameters unique to each class
 UserClassParameters = namedtuple(
-    "UserClassParameters", ["reservation_price", "steepness", "shift", "upper_bound"]
+    "UserClassParameters", ["reservation_price", "upper_bound", "max_useful_budget"]
 )
 
 # Contains the name and the value of a single user feature (which can be either 0 or 1)
@@ -171,28 +170,25 @@ def example_environment(
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
         [
-            UserClassParameters(8, 0.06, 1, 160),
-            UserClassParameters(10, 0.06, 1, 150),
-            UserClassParameters(10, 0.07, 0.8, 160),
-            UserClassParameters(8, 0.03, 0.4, 120),
-            UserClassParameters(7, 0.06, 0.7, 150),
-            UserClassParameters(14, 0.08, 0.1, 180),
+            UserClassParameters(10, 0.2, 20),
+            UserClassParameters(10, 0.15, 20),
+            UserClassParameters(8, 0.3, 50),
+            UserClassParameters(7, 0.1, 35),
+            UserClassParameters(14, 0.25, 15),
         ],
         [
-            UserClassParameters(25, 0.06, 1, 120),
-            UserClassParameters(22, 0.03, 0.4, 100),
-            UserClassParameters(20, 0.04, 0.5, 80),
-            UserClassParameters(16, 0.05, 0.4, 150),
-            UserClassParameters(24, 0.07, 0.3, 100),
-            UserClassParameters(20, 0.03, 0.1, 110),
+            UserClassParameters(22, 0.35, 25),
+            UserClassParameters(20, 0.1, 35),
+            UserClassParameters(16, 0.15, 40),
+            UserClassParameters(24, 0.2, 10),
+            UserClassParameters(20, 0.05, 60),
         ],
         [
-            UserClassParameters(26, 0.03, 0.5, 120),
-            UserClassParameters(33, 0.08, 0.5, 260),
-            UserClassParameters(25, 0.07, 1.0, 280),
-            UserClassParameters(30, 0.06, 0.6, 250),
-            UserClassParameters(31, 0.03, 0.2, 290),
-            UserClassParameters(36, 0.07, 0.3, 260),
+            UserClassParameters(33, 0.1, 30),
+            UserClassParameters(25, 0.15, 35),
+            UserClassParameters(30, 0.15, 20),
+            UserClassParameters(31, 0.4, 50),
+            UserClassParameters(36, 0.1, 70),
         ],
     ],
     competitor_budget=100,
@@ -260,7 +256,7 @@ def example_environment(
 
 def alpha_function(budget, upper_bound, max_useful_budget):
 
-    """Alpha function with the shape of a sigmoidal function. Computes the
+    """Alpha function with the shape of a exponential function. Computes the
     expected value of clicks given a certain budget.
 
     Arguments:
@@ -279,7 +275,7 @@ def alpha_function(budget, upper_bound, max_useful_budget):
 
     steepness = 4 / max_useful_budget
 
-    return np.maximum(0, upper_bound * (1 - np.exp(-steepness * budget)))
+    return upper_bound * (1 - np.exp(-steepness * budget))
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
@@ -410,25 +406,34 @@ def get_day_of_interactions(
     # TODO fix this, not correct
     elif len(np.shape(budget_allocation)) == 2:
         budget_allocation = np.array(budgets)
+        raise RuntimeError(
+            "Cannot handle multiple contexts, still has to be implemented"
+        )
 
     else:
         raise RuntimeError(f"Invalid budget shape: {np.shape(budgets)}")
 
     total_interactions = list()
 
-    for user_class, class_population, class_parameters, assigned_budget in enumerate(
+    for user_class, (class_population, class_parameters, assigned_budget) in enumerate(
         zip(customers_per_class, env_data.classes_parameters, budget_allocation)
     ):
-        alpha_ratios = compute_alphas(class_parameters, assigned_budget)
 
+        alpha_ratios = [
+            alpha_function(product_budget, params.upper_bound, params.max_useful_budget)
+            for params, product_budget in zip(class_parameters, assigned_budget)
+        ]
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
+        # print(alpha_ratios)
         for ratio in range(len(alpha_ratios)):
             if isclose(alpha_ratios[ratio], 0.0, rel_tol=1e-10):
                 alpha_ratios[ratio] = 2e-16
 
-        alpha_ratios = rng.dirichlet(alpha_ratios * de_noise)
-        users_landing_on_pages = np.delete(alpha_ratios, -1) * class_population
+        alpha_ratios_noisy = rng.dirichlet(np.array(alpha_ratios) * de_noise)
+        users_landing_on_pages = np.rint(
+            np.delete(alpha_ratios_noisy, -1) * class_population
+        ).astype(int)
 
         # According to product ratios, for every product the computed number on
         # users are landed on the right and the interaction starts
@@ -524,11 +529,3 @@ def _go_to_page(rng, user_class, primary_product, items_bought, edges, env_data)
 
 def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteraction]:
     return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]
-
-
-def find_optimal_budget(env: EnvironmentData) -> np.ndarray:
-    pass
-
-
-def compute_maximum_reward(env: EnvironmentData) -> int:
-    pass

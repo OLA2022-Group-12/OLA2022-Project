@@ -55,8 +55,8 @@ def simulation(
     rng: Generator,
     env: EnvironmentData,
     learner_factory,
-    n_customers_mean: int = 100,
-    n_customers_variance: int = 10,
+    population_mean: int = 100,
+    population_variance: int = 10,
     n_experiment: int = 1,
     n_days: int = 100,
     n_budget_steps: int = 5,
@@ -124,23 +124,21 @@ def simulation(
         for day in trange(n_days, desc="day"):
             # Every day, there is a number of new potential customers drawn from a
             # normal distribution, rounded to the closest integer
-            n_new_customers = int(
-                np.rint(rng.normal(n_customers_mean, n_customers_variance))
-            )
+            population = int(np.rint(rng.normal(population_mean, population_variance)))
 
             # The mimnum number of customers is set to 1, so that none of the
             # operations of the environment requiring division computation break
             # and we avoid not consistent datab like a negative number of customers
-            if n_new_customers <= 0:
-                n_new_customers = 1
+            if population <= 0:
+                population = 1
 
-            logger.debug(f"Got {n_new_customers} new customer(s) on day {day}")
+            logger.debug(f"Got {population} new customer(s) on day {day}")
 
             # Ask the learner to estimate the budgets to assign
             budgets = learner.predict(masked_env)
 
             # Compute interactions for the entire day
-            interactions = get_day_of_interactions(rng, n_new_customers, budgets, env)
+            interactions = get_day_of_interactions(rng, population, budgets, env)
             logger.debug(f"Interactions: {interactions}")
 
             rewards = _get_aggregated_reward_from_interactions(
