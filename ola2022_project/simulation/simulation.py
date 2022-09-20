@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 
 
 class Simulation:
+
+    """Class used for instantiating and running an interactive simulation
+    that can be customized and edited between different executions.
+    The outputs of the simulation are stored in the 'dataset' and 'rewards' attributes.
+    """
+
     def __init__(
         self,
         rng: Generator,
@@ -34,6 +40,29 @@ class Simulation:
         n_customers_variance: int = 10,
         **learner_params,
     ):
+
+        """Constructor for the Simulation.
+
+        Arguments:
+            rng: randomness generator
+
+            env: environment where the simulation is going to be run
+
+            step: step number of the simulation, related to the various steps requested
+            by the project specification and corresponding to which properties
+            of the environment are masked to the learner and to which learner is going
+            to be instantiatiated
+
+            n_budget_steps: number of steps in which the budget must be divided
+
+            n_customers_mean: expected value of the number of new potential
+            customers every day
+
+            n_customers_variance: variance of the daily number of potential customers
+
+            learner_params: various parameters used to created the selected learner
+        """
+
         self.rng = rng
         self.env = env
         self.step = step
@@ -46,6 +75,17 @@ class Simulation:
         self.reset(True, learner_params)
 
     def _learner_init(self, **params):
+
+        """Creates a new learner utilizing the current simulation step and the
+        given learner creation parameters.
+
+        Arguments:
+            params: learner creation parameters
+
+        Returns:
+            A new untrained learner depending on the current simulation step
+        """
+
         if self.step == Step.CLAIRVOYANT:
             # Creation of clairovyant learner
             return ClairvoyantLearner(self.n_budget_steps)
@@ -79,6 +119,17 @@ class Simulation:
         n_days: int = 100,
         show_progress_graphs: bool = False,
     ):
+
+        """Simulates a given number of days of the simulation while appending all the
+        results to the dedicated simulation attributes.
+
+        Arguments:
+            n_days: number of days to run the simulation for
+
+            show_progress_graphs: if set to True, will visualize the learner progress graphs
+            (if implemented) at each iteration
+        """
+
         for day in trange(n_days, desc="days"):
             # Every day, there is a number of new potential customers drawn
             # from a normal distribution, rounded to the closest integer
@@ -131,6 +182,7 @@ class Simulation:
         pass
 
     def _get_aggregated_reward_from_interactions(self, interactions: List[Interaction]):
+
         """Computes the margin made each day, for each of the 3 classes of users.
 
         Arguments:
@@ -162,6 +214,17 @@ class Simulation:
         return np.sum(reward_per_product)
 
     def reset(self, reset_learner: bool = False, **learner_params):
+
+        """Resets the dynamic parameters of the simulation to their initial values.
+
+        Arguments:
+            reset_learner: if set to True, will also reset the learner by creating a new one
+            utilizing the current simulation step as a reference
+
+            learner_params: if the reset_learner flag is set to True, the learner_params will
+            be passed to the new learner that will be created
+        """
+
         self.tot_days = 0
         self.dataset = np.array([])
         self.rewards = np.array([])
