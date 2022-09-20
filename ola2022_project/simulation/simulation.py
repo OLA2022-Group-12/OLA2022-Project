@@ -70,9 +70,27 @@ class Simulation:
         self.n_customers_mean = n_customers_mean
         self.n_customers_variance = n_customers_variance
 
-        self.masked_env = create_masked_environment(env)
+        self._masked_env = create_masked_environment(self.env)
 
         self.reset(True, learner_params)
+
+    @property
+    def step(self):
+        return self.step
+
+    @step.setter
+    def step(self, value: Step):
+        self.step = value
+        self.learner = self._learner_init()
+
+    @property
+    def env(self):
+        return self.env
+
+    @env.setter
+    def env(self, value: EnvironmentData):
+        self.env = value
+        self._masked_env = create_masked_environment(self.env)
 
     def _learner_init(self, **params):
 
@@ -178,7 +196,7 @@ class Simulation:
         n_experiments=2,
         show_progress_graphs: bool = False,
     ):
-        # TODO
+        # TODO: remove and create external wrapper
         pass
 
     def _get_aggregated_reward_from_interactions(self, interactions: List[Interaction]):
