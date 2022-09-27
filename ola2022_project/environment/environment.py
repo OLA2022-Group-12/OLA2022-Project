@@ -8,7 +8,8 @@ from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
 
-"""The correct use of this module is to construct the class
+"""The correct use of this module is to construct the class    y_point = alpha_function(x_point, 0.3, 125) + rng.normal(0, noise)
+
 Environment_data by using the function example_environment which returns an
 instance of Environment_data with sample values. The class can also be created
 by itself by specifying all attributes.
@@ -161,25 +162,25 @@ def example_environment(
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
         [
-            UserClassParameters(10, 0.2, 20),
-            UserClassParameters(10, 0.15, 20),
-            UserClassParameters(8, 0.3, 50),
-            UserClassParameters(7, 0.1, 35),
-            UserClassParameters(14, 0.25, 15),
+            UserClassParameters(10, 0.2, 120),
+            UserClassParameters(10, 0.15, 120),
+            UserClassParameters(8, 0.3, 300),
+            UserClassParameters(7, 0.1, 220),
+            UserClassParameters(14, 0.25, 170),
         ],
         [
-            UserClassParameters(22, 0.35, 25),
-            UserClassParameters(20, 0.1, 35),
-            UserClassParameters(16, 0.15, 40),
-            UserClassParameters(24, 0.2, 10),
-            UserClassParameters(20, 0.05, 60),
+            UserClassParameters(22, 0.95, 190),
+            UserClassParameters(20, 0.1, 210),
+            UserClassParameters(16, 0.15, 240),
+            UserClassParameters(24, 0.2, 80),
+            UserClassParameters(20, 0.05, 360),
         ],
         [
-            UserClassParameters(33, 0.1, 30),
-            UserClassParameters(25, 0.15, 35),
-            UserClassParameters(30, 0.15, 20),
-            UserClassParameters(31, 0.4, 50),
-            UserClassParameters(36, 0.1, 70),
+            UserClassParameters(33, 0.4, 180),
+            UserClassParameters(25, 0.15, 210),
+            UserClassParameters(30, 0.15, 240),
+            UserClassParameters(31, 0.1, 300),
+            UserClassParameters(36, 0.1, 420),
         ],
     ],
     lam=0.5,
@@ -262,9 +263,12 @@ def alpha_function(budget, upper_bound, max_useful_budget):
         certain class function
     """
 
-    steepness = 4 / max_useful_budget
+    if max_useful_budget > 2e-16:
+        steepness = 4 / max_useful_budget
+        return upper_bound * (1 - np.exp(-steepness * budget))
 
-    return upper_bound * (1 - np.exp(-steepness * budget))
+    else:
+        return upper_bound
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
@@ -393,8 +397,7 @@ def get_day_of_interactions(
     # If the array is 2-dimensional it means that we are optimizing for more than
     # one context
     # TODO implement this
-    elif len(np.shape(budget_allocation)) == 2:
-        budget_allocation = np.array(budgets)
+    elif len(np.shape(budgets)) == 2:
         raise RuntimeError(
             "Cannot handle multiple contexts, still has to be implemented"
         )
