@@ -267,6 +267,8 @@ def alpha_function(budget, upper_bound, max_useful_budget):
         steepness = 4 / max_useful_budget
         return upper_bound * (1 - np.exp(-steepness * budget))
 
+    # In this case max_useful_budget == 0 circa, this means that we 
+    # immediately reach the upper bound
     else:
         return upper_bound
 
