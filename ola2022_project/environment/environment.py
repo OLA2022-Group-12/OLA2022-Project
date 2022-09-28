@@ -2,11 +2,12 @@ import logging
 from aenum import Enum, NoAlias
 
 from typing import Optional, List, Tuple
-from math import isclose
 from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
+
+from ola2022_project.utils import replace_zeros
 
 """The correct use of this module is to construct the class    y_point = alpha_function(x_point, 0.3, 125) + rng.normal(0, noise)
 
@@ -430,9 +431,7 @@ def get_day_of_interactions(
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        for ratio in range(len(alpha_ratios)):
-            if isclose(alpha_ratios[ratio], 0.0, rel_tol=1e-10):
-                alpha_ratios[ratio] = 2e-16
+        alpha_ratios = replace_zeros(alpha_ratios)
 
         alpha_ratios_noisy = rng.dirichlet(np.array(alpha_ratios) * de_noise)
         users_landing_on_pages = np.rint(
@@ -443,8 +442,8 @@ def get_day_of_interactions(
             f"Dirichlet output (doesn't include competitor): {alpha_ratios_noisy}"
         )
 
-        # According to product ratios, for every product the computed number on
-        # users are landed on the right and the interaction starts
+        # According to product ratios, for every product the computed number of
+        # users lands on the correct product and the interaction starts
         for product, n_users in enumerate(users_landing_on_pages):
             for _ in range(n_users):
                 user_class, items, edges = _get_interaction(

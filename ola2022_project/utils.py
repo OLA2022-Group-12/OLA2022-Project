@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
 import numpy as np
+from math import isclose
 
 
 logger = logging.getLogger(__name__)
@@ -109,5 +110,20 @@ def calculate_aggregated_budget_value(
     return aggregated_budget_value
 
 
-def compute_alphas(class_parameters, assigned_budget):
-    pass
+def replace_zeros(array, replace_with=1e-16, tollerance=1e-10):
+
+    """Replaces every number close to 0 with the specified number. 
+    The check is made using the tollerance argument.
+
+    Arguments:
+        array: a 1-d array or list of floats
+        replace_with: a float to put in place of the zeros
+        tollerance: a float representing the relative tollerance 
+            of the check
+    """
+
+    for element in range(len(array)):
+            if isclose(array[element], 0.0, rel_tol=tollerance):
+                array[element] = replace_with
+
+    return array
