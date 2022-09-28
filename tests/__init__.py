@@ -10,7 +10,7 @@ from hypothesis.extra.numpy import arrays
 
 @st.composite
 def generated_environment(draw):
-    """Generates an environment with random data based on some assumtions"""
+    """Generates an environment with random data based on some assumptions"""
 
     max_budget_size = 1000
     min_classes = 3
@@ -58,15 +58,13 @@ def generated_environment(draw):
             st.tuples(
                 # Reservation price
                 st.integers(min_value=min_product_price, max_value=max_product_price),
-                # Steepness
-                st.floats(min_value=0.1, max_value=0.9),
-                # Shift
-                st.floats(min_value=1.0, max_value=10.0),
+                # Max useful budget
+                st.floats(min_value=1, max_value=1000),
                 # Upper bound
-                st.integers(min_value=10, max_value=100),
+                st.integers(min_value=0.0, max_value=1),
             ).map(
                 lambda p: UserClassParameters(
-                    reservation_price=p[0], steepness=p[1], shift=p[2], upper_bound=p[3]
+                    reservation_price=p[0], max_useful_budget=p[1], upper_bound=p[2]
                 )
             ),
             min_size=n_products + 1,
@@ -76,9 +74,6 @@ def generated_environment(draw):
         max_size=n_classes,
     )
     classes_parameters = draw(classes_parameters_st)
-
-    competitor_budget_st = st.integers(min_value=0, max_value=max_budget_size)
-    competitor_budget = draw(competitor_budget_st)
 
     lambda_st = st.floats(min_value=0.1, max_value=0.9)
     lam = draw(lambda_st)
@@ -147,7 +142,6 @@ def generated_environment(draw):
         class_features=class_features,
         product_prices=product_prices,
         classes_parameters=classes_parameters,
-        competitor_budget=competitor_budget,
         lam=lam,
         max_items=max_items,
         graph=graph,
