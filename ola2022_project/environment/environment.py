@@ -7,10 +7,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
 
-from ola2022_project.utils import replace_zeros
-
-"""The correct use of this module is to construct the class    y_point = alpha_function(x_point, 0.3, 125) + rng.normal(0, noise)
-
+"""The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
 instance of Environment_data with sample values. The class can also be created
 by itself by specifying all attributes.
@@ -390,7 +387,7 @@ def get_day_of_interactions(
     )
 
     # If the budgets array is 1-dimensional it means that we are optimizing for a
-    # single context (no splitting has appened)
+    # single context (no splitting has happened)
     if len(np.shape(budgets)) == 1:
         budget_allocation = np.array(
             [np.array(budgets) / n_classes for _ in range(n_classes)]
