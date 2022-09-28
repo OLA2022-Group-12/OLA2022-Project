@@ -8,8 +8,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
 
-"""The correct use of this module is to construct the class    y_point = alpha_function(x_point, 0.3, 125) + rng.normal(0, noise)
-
+"""The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
 instance of Environment_data with sample values. The class can also be created
 by itself by specifying all attributes.
