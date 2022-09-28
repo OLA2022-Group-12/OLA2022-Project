@@ -388,7 +388,7 @@ def get_day_of_interactions(
     )
 
     # If the budgets array is 1-dimensional it means that we are optimizing for a
-    # single context (no splitting has appened)
+    # single context (no splitting has happened)
     if len(np.shape(budgets)) == 1:
         budget_allocation = np.array(
             [np.array(budgets) / n_classes for _ in range(n_classes)]
