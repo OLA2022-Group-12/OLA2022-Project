@@ -6,6 +6,7 @@ from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
+from ola2022_project.utils import replace_zeros
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an

@@ -17,7 +17,6 @@ class StupidLearner(Learner):
 
     def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
         return np.full(
-            #(1, len(data.product_prices)), data.total_budget / len(data.product_prices)
             (len(data.product_prices), ), data.total_budget / len(data.product_prices)
         )
 
