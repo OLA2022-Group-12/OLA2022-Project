@@ -36,8 +36,8 @@ class Simulation:
         env: EnvironmentData,
         step: Step = Step.ZERO,
         n_budget_steps: int = 5,
-        n_customers_mean: int = 100,
-        n_customers_variance: int = 10,
+        population_mean: int = 100,
+        population_variance: int = 10,
         **learner_params,
     ):
 
@@ -55,10 +55,10 @@ class Simulation:
 
             n_budget_steps: number of steps in which the budget must be divided
 
-            n_customers_mean: expected value of the number of new potential
+            population_mean: expected value of the number of new potential
             customers every day
 
-            n_customers_variance: variance of the daily number of potential customers
+            population_variance: variance of the daily number of potential customers
 
             learner_params: various parameters used to created the selected learner
         """
@@ -67,8 +67,8 @@ class Simulation:
         self.env = env
         self.step = step
         self.n_budget_steps = n_budget_steps
-        self.n_customers_mean = n_customers_mean
-        self.n_customers_variance = n_customers_variance
+        self.population_mean = population_mean
+        self.population_variance = population_variance
 
         self._masked_env = create_masked_environment(self.env)
 
@@ -151,26 +151,26 @@ class Simulation:
         for day in trange(n_days, desc="days"):
             # Every day, there is a number of new potential customers drawn
             # from a normal distribution, rounded to the closest integer
-            n_new_customers = int(
+            population = int(
                 np.rint(
-                    self.rng.normal(self.n_customers_mean, self.n_customers_variance)
+                    self.rng.normal(self.population_mean, self.population_variance)
                 )
             )
 
             # The mimnum number of customers is set to 1, so that none of the
             # operations of the environment requiring division computation break
             # and we avoid inconsistent data like a negative number of customers
-            if n_new_customers <= 0:
-                n_new_customers = 1
+            if population <= 0:
+                population = 1
 
-            logger.debug(f"Got {n_new_customers} new customer(s) on day {day}")
+            logger.debug(f"Got {population} new customer(s) on day {day}")
 
             # Ask the learner to estimate the budgets to assign
             budgets = self.learner.predict(self.masked_env)
 
             # Compute interactions for the entire day
             interactions = get_day_of_interactions(
-                self.rng, n_new_customers, budgets, self.env
+                self.rng, population, budgets, self.env
             )
             self.dataset.append(interactions)
             logger.debug(f"Interactions: {interactions}")

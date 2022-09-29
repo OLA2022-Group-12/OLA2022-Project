@@ -2,12 +2,11 @@ import logging
 from aenum import Enum, NoAlias
 
 from typing import Optional, List, Tuple
-from math import isclose
 from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
-
+from ola2022_project.utils import replace_zeros
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Named tuple containing the fundamental parameters unique to each class
 UserClassParameters = namedtuple(
-    "UserClassParameters", ["reservation_price", "steepness", "shift", "upper_bound"]
+    "UserClassParameters", ["reservation_price", "upper_bound", "max_useful_budget"]
 )
 
 # Contains the name and the value of a single user feature (which can be either 0 or 1)
@@ -77,10 +76,6 @@ class EnvironmentData:
     # every product
     classes_parameters: List[List[UserClassParameters]]
 
-    # The competitor budget is assumed to be constant, since the competitor is
-    # non-strategic
-    competitor_budget: int
-
     # Lambda parameter, which is the probability of osserving the next secondary product
     # according to the project's assignment
     lam: float
@@ -117,10 +112,6 @@ class MaskedEnvironmentData:
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
     next_products: List[Tuple[int, int]]
-
-    # The competitor budget is assumed to be constant, since the competitor is
-    # non-strategic
-    competitor_budget: Optional[int] = None
 
     # Max number of items a customer can buy of a certain product. The number of
     # bought items is determined randomly with max_items as upper bound
@@ -171,31 +162,27 @@ def example_environment(
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
         [
-            UserClassParameters(8, 0.06, 1, 160),
-            UserClassParameters(10, 0.06, 1, 150),
-            UserClassParameters(10, 0.07, 0.8, 160),
-            UserClassParameters(8, 0.03, 0.4, 120),
-            UserClassParameters(7, 0.06, 0.7, 150),
-            UserClassParameters(14, 0.08, 0.1, 180),
+            UserClassParameters(10, 0.2, 120),
+            UserClassParameters(10, 0.15, 120),
+            UserClassParameters(8, 0.3, 300),
+            UserClassParameters(7, 0.1, 220),
+            UserClassParameters(14, 0.25, 170),
         ],
         [
-            UserClassParameters(25, 0.06, 1, 120),
-            UserClassParameters(22, 0.03, 0.4, 100),
-            UserClassParameters(20, 0.04, 0.5, 80),
-            UserClassParameters(16, 0.05, 0.4, 150),
-            UserClassParameters(24, 0.07, 0.3, 100),
-            UserClassParameters(20, 0.03, 0.1, 110),
+            UserClassParameters(22, 0.95, 190),
+            UserClassParameters(20, 0.1, 210),
+            UserClassParameters(16, 0.15, 240),
+            UserClassParameters(24, 0.2, 80),
+            UserClassParameters(20, 0.05, 360),
         ],
         [
-            UserClassParameters(26, 0.03, 0.5, 120),
-            UserClassParameters(33, 0.08, 0.5, 260),
-            UserClassParameters(25, 0.07, 1.0, 280),
-            UserClassParameters(30, 0.06, 0.6, 250),
-            UserClassParameters(31, 0.03, 0.2, 290),
-            UserClassParameters(36, 0.07, 0.3, 260),
+            UserClassParameters(33, 0.4, 180),
+            UserClassParameters(25, 0.15, 210),
+            UserClassParameters(30, 0.15, 240),
+            UserClassParameters(31, 0.1, 300),
+            UserClassParameters(36, 0.1, 420),
         ],
     ],
-    competitor_budget=100,
     lam=0.5,
     max_items=3,
     graph_fully_connected=True,
@@ -250,7 +237,6 @@ def example_environment(
         class_features=class_features,
         product_prices=product_prices,
         classes_parameters=classes_parameters,
-        competitor_budget=competitor_budget,
         lam=lam,
         max_items=max_items,
         graph=graph,
@@ -258,28 +244,33 @@ def example_environment(
     )
 
 
-def alpha_function(budget, steepness, shift, upper_bound):
+def alpha_function(budget, upper_bound, max_useful_budget):
 
-    """Alpha function with the shape of a sigmoidal function. Computes the
+    """Alpha function with the shape of a exponential function. Computes the
     expected value of clicks given a certain budget.
 
     Arguments:
         budget: integer or float representing the budget
 
-        steepness: float representing the steepness of the sigmoidal curve
-
-        shift: float representing the shift of the entire function. The shift
-            should always be positive and not smaller than 3 circa
-
-        upper_bound: integer representing the maximum expected number of \
+        upper_bound: integer representing the maximum expected number of
             clicks possible
+
+        max_useful_budget: maximum amount of budget after which increasing
+            the budget won't lead to a ratio increase
 
     Returns:
         A float representing the expected value of number of clicks for a
         certain class function
     """
 
-    return np.maximum(0, upper_bound * (1 - np.exp(-steepness * budget + shift)))
+    if max_useful_budget > 2e-16:
+        steepness = 4 / max_useful_budget
+        return upper_bound * (1 - np.exp(-steepness * budget))
+
+    # In this case max_useful_budget == 0 circa, this means that we 
+    # immediately reach the upper bound
+    else:
+        return upper_bound
 
 
 def generate_graph(rng, size, fully_connected, zeros_probability):
@@ -356,7 +347,13 @@ def _get_interaction(rng, user_class, primary_product, env_data):
     return user_class, items_bought, edges
 
 
-def get_day_of_interactions(rng, num_customers, budgets, env_data: EnvironmentData):
+def get_day_of_interactions(
+    rng: np.random.default_rng,
+    population,
+    budgets,
+    env_data: EnvironmentData,
+    de_noise=50,
+):
 
     """Main method to be called when interacting with the environment. Outputs
     all the interactions of an entire day. When called generates new alphas from
@@ -380,62 +377,81 @@ def get_day_of_interactions(rng, num_customers, budgets, env_data: EnvironmentDa
         represents how many of the products i+1 the customer bought
     """
 
-    # Competitor budget is added to the array of budgets
-    budgets = np.insert(budgets, 0, env_data.competitor_budget)
+    n_classes = len(env_data.class_ratios)
 
     # Computing total number of customers for each class based on class_ratios
-    customers_of_class_1 = int(num_customers * env_data.class_ratios[0])
-    customers_of_class_2 = int(num_customers * env_data.class_ratios[1])
-    customers_of_class_3 = num_customers - customers_of_class_1 - customers_of_class_2
     customers_per_class = [
-        customers_of_class_1,
-        customers_of_class_2,
-        customers_of_class_3,
+        int(np.rint(population * ratio)) for ratio in env_data.class_ratios
     ]
+
+    logger.debug(
+        f"Population divided between classes as follows: {customers_per_class}"
+    )
+
+    # If the budgets array is 1-dimensional it means that we are optimizing for a
+    # single context (no splitting has happened)
+    if len(np.shape(budgets)) == 1:
+        budget_allocation = np.array(
+            [np.array(budgets) / n_classes for _ in range(n_classes)]
+        )
+        logger.debug("Targeting 1 context in current environment")
+
+    # If the array is 2-dimensional it means that we are optimizing for more than
+    # one context
+    # TODO implement this
+    elif len(np.shape(budgets)) == 2:
+        raise RuntimeError(
+            "Cannot handle multiple contexts, still has to be implemented"
+        )
+
+    else:
+        raise RuntimeError(f"Invalid budget shape: {np.shape(budgets)}")
 
     total_interactions = list()
 
-    # For every class, product ratios are computed
-    for i in range(3):
+    # Generate interactions for every class
+    for user_class, (class_population, class_parameters, assigned_budget) in enumerate(
+        zip(customers_per_class, env_data.classes_parameters, budget_allocation)
+    ):
 
-        click_ratios = [
-            alpha_function(
-                budgets[j],
-                env_data.classes_parameters[i][j].steepness,
-                env_data.classes_parameters[i][j].shift,
-                env_data.classes_parameters[i][j].upper_bound,
-            )
-            for j in range(len(budgets))
+        alpha_ratios = [
+            alpha_function(product_budget, params.upper_bound, params.max_useful_budget)
+            for params, product_budget in zip(class_parameters, assigned_budget)
         ]
+
+        competitor_ratio = 1 - np.sum(alpha_ratios)
+
+        if competitor_ratio < 0:
+            raise RuntimeError("Bad alpha-function parameters, total ratio ecceeds 1")
+
+        alpha_ratios.append(competitor_ratio)
+
+        logger.debug(f"Computed alpha ratios: {alpha_ratios}")
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        for product in range(len(click_ratios)):
-            if isclose(click_ratios[product], 0.0, rel_tol=1e-10):
-                click_ratios[product] = 2e-16
+        alpha_ratios = replace_zeros(alpha_ratios)
 
-        alpha_ratios = rng.dirichlet(click_ratios)
+        alpha_ratios_noisy = rng.dirichlet(np.array(alpha_ratios) * de_noise)
+        users_landing_on_pages = np.rint(
+            np.delete(alpha_ratios_noisy, -1) * class_population
+        ).astype(int)
 
-        # This array will contain how many customers will land on a certain
-        # product page, excluding the competitor page, which corresponds to the
-        # first ratio
-        product_ratios = [
-            int(alpha_ratios[1] * customers_per_class[i]),
-            int(alpha_ratios[2] * customers_per_class[i]),
-            int(alpha_ratios[3] * customers_per_class[i]),
-            int(alpha_ratios[4] * customers_per_class[i]),
-            int(alpha_ratios[5] * customers_per_class[i]),
-        ]
+        logger.debug(
+            f"Dirichlet output (doesn't include competitor): {alpha_ratios_noisy}"
+        )
 
-        # According to product ratios, for every product the computed number on
-        # users are landed on the right and the interaction starts
-        for product, ratio in enumerate(product_ratios):
-            for _ in range(ratio):
-                user_class, items, edges = _get_interaction(rng, i, product, env_data)
-                feature_idx = rng.integers(len(env_data.class_features[i]))
+        # According to product ratios, for every product the computed number of
+        # users lands on the correct product and the interaction starts
+        for product, n_users in enumerate(users_landing_on_pages):
+            for _ in range(n_users):
+                user_class, items, edges = _get_interaction(
+                    rng, user_class, product, env_data
+                )
+                feature_idx = rng.integers(len(env_data.class_features[user_class]))
                 total_interactions.append(
                     Interaction(
-                        env_data.class_features[i][feature_idx],
+                        env_data.class_features[user_class][feature_idx],
                         user_class,
                         items,
                         product,
@@ -519,11 +535,3 @@ def _go_to_page(rng, user_class, primary_product, items_bought, edges, env_data)
 
 def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteraction]:
     return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]
-
-
-def find_optimal_budget(env: EnvironmentData) -> np.ndarray:
-    pass
-
-
-def compute_maximum_reward(env: EnvironmentData) -> int:
-    pass

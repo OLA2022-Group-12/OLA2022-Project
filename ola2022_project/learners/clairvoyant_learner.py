@@ -53,10 +53,10 @@ class ClairvoyantLearner(Learner):
             [
                 [
                     [
-                        alpha_function(budget, steepness, shift, upper_bound)
+                        alpha_function(budget, upper_bound, max_useful_budget)
                         for budget in budget_steps
                     ]
-                    for (_, steepness, shift, upper_bound) in user_class
+                    for (_, upper_bound, max_useful_budget) in user_class
                 ]
                 for user_class in data.classes_parameters
             ]
