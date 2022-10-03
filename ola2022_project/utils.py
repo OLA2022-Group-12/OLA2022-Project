@@ -112,18 +112,18 @@ def calculate_aggregated_budget_value(
 
 def replace_zeros(array, replace_with=1e-16, tollerance=1e-10):
 
-    """Replaces every number close to 0 with the specified number. 
+    """Replaces every number close to 0 with the specified number.
     The check is made using the tolerance argument.
 
     Arguments:
         array: a 1-d array or list of floats
         replace_with: a float to put in place of the zeros
-        tolerance: a float representing the relative tolerance 
+        tolerance: a float representing the relative tolerance
             of the check
     """
 
     for element in range(len(array)):
-            if isclose(array[element], 0.0, rel_tol=tollerance):
-                array[element] = replace_with
+        if isclose(array[element], 0.0, rel_tol=tollerance):
+            array[element] = replace_with
 
     return array
