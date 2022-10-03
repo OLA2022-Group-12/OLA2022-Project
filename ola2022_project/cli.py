@@ -44,11 +44,11 @@ def simulation(verbose, n_experiments, n_days, show_progress_graphs):
         rng=rng,
         env=env,
         learner_factory=GraphlessLearner,
-        n_customers_mean=10,
-        n_customers_variance=1,
+        population_mean=100,
+        population_variance=1,
         n_days=n_days,
         n_experiment=n_experiments,
-        step=Step.ZERO,
+        step=Step.THREE,
         show_progress_graphs=show_progress_graphs,
     )
     logger.debug(f"Rewards per experiment: {rewards_per_experiment}")

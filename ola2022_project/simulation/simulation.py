@@ -152,9 +152,7 @@ class Simulation:
             # Every day, there is a number of new potential customers drawn
             # from a normal distribution, rounded to the closest integer
             population = int(
-                np.rint(
-                    self.rng.normal(self.population_mean, self.population_variance)
-                )
+                np.rint(self.rng.normal(self.population_mean, self.population_variance))
             )
 
             # The mimnum number of customers is set to 1, so that none of the
