@@ -74,11 +74,11 @@ def simulation(
         learner_factory: a function which creates a new learner (needed to run
         multiple experiments with "fresh" learners)
 
-        n_customers_mean: expected value of the number of new potential
+        population_mean: expected value of the number of new potential
             customers every day
 
-        n_customers_variance: variance of the daily number of potential
-        customers
+        population_variance: variance of the daily number of potential
+            customers
 
         n_experiment: number of times the experiment is performed,
           to have statistically more accurate results. By default, the value is
