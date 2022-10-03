@@ -1,6 +1,6 @@
 import logging
 import copy
-from ola2022_project.learners.learner import (
+from ola2022_project.learners import (
     ClairvoyantLearner,
     StupidLearner,
     AlphalessLearner,
@@ -36,7 +36,7 @@ class Simulation:
         rng: Generator,
         env: EnvironmentData,
         step: Step = Step.ZERO,
-        n_budget_steps: int = 5,
+        n_budget_steps: int = 20,
         population_mean: int = 100,
         population_variance: int = 10,
         **learner_params,
@@ -65,33 +65,33 @@ class Simulation:
         """
 
         self.rng = rng
-        self.env = env
-        self.step = step
+        self._step = step
+        self.env = (
+            env  # Exploit the property setter to also create the masked environment
+        )
         self.n_budget_steps = n_budget_steps
         self.population_mean = population_mean
         self.population_variance = population_variance
 
-        self._masked_env = create_masked_environment(self.env)
-
-        self.reset(True, learner_params)
+        self.reset(True, **learner_params)
 
     @property
     def step(self):
-        return self.step
+        return self._step
 
     @step.setter
     def step(self, value: Step):
-        self.step = value
+        self._step = value
         self.learner = self._learner_init()
 
     @property
     def env(self):
-        return self.env
+        return self._env
 
     @env.setter
     def env(self, value: EnvironmentData):
-        self.env = value
-        self._masked_env = create_masked_environment(self.env)
+        self._env = value
+        self.masked_env = create_masked_environment(self.step, self.env)
 
     def _learner_init(self, **params):
 
@@ -171,12 +171,12 @@ class Simulation:
             interactions = get_day_of_interactions(
                 self.rng, population, budgets, self.env
             )
-            self.dataset.append(interactions)
+            self.dataset = np.append(self.dataset, interactions)
             logger.debug(f"Interactions: {interactions}")
 
             # Compute rewards from interactions
             rewards = self._get_aggregated_reward_from_interactions(interactions)
-            self.rewards.append(rewards)
+            self.rewards = np.append(self.rewards, rewards)
             logger.debug(f"Rewards: {rewards}")
 
             # Update learner with new observed reward
@@ -237,12 +237,12 @@ class Simulation:
         self.dataset = np.array([])
         self.rewards = np.array([])
         if reset_learner:
-            self.learner = self._learner_init()
+            self.learner = self._learner_init(**learner_params)
 
 
 def simulate_n(
     self,
-    simulation,
+    simulation: Simulation,
     n=2,
     n_days: int = 100,
     show_progress_graphs: bool = False,
