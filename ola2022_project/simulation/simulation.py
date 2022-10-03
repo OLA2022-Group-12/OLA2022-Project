@@ -1,4 +1,5 @@
 import logging
+import copy
 from ola2022_project.learners.learner import (
     ClairvoyantLearner,
     StupidLearner,
@@ -188,15 +189,6 @@ class Simulation:
 
         self.tot_days += n_days
 
-    def simulate_n(
-        self,
-        n_days: int = 100,
-        n_experiments=2,
-        show_progress_graphs: bool = False,
-    ):
-        # TODO: remove and create external wrapper
-        pass
-
     def _get_aggregated_reward_from_interactions(self, interactions: List[Interaction]):
 
         """Computes the margin made each day, for each of the 3 classes of users.
@@ -246,3 +238,41 @@ class Simulation:
         self.rewards = np.array([])
         if reset_learner:
             self.learner = self._learner_init()
+
+
+def simulate_n(
+    self,
+    simulation,
+    n=2,
+    n_days: int = 100,
+    show_progress_graphs: bool = False,
+):
+
+    """Function that automatically instatiates and runs n equal simulations with the sole purpose
+    of visualization (therefore the simulations aren't fully customizable and can't be modified
+    during the exection)
+
+    Arguments:
+        simulation: simulation object for referencing parameters at creation time (it won't
+        actually be used)
+
+        n: number of experiments/simulations to run
+
+        n_days: number of days to run each simulation for
+
+        show_progress_graphs: if set to True, will visualize the learner progress graphs
+        (if implemented) at each iteration
+
+    Returns:
+        A list containing all the collected rewards obtained by running each experiment
+
+    """
+
+    sims = [copy.deepcopy(simulation)] * n
+    rewards = []
+
+    for sim in sims:
+        sim.simulate(n_days, show_progress_graphs)
+        rewards.append(sim.rewards)
+
+    return rewards
