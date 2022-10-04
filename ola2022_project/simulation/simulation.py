@@ -1,5 +1,4 @@
 import logging
-import copy
 from ola2022_project.learners import (
     ClairvoyantLearner,
     StupidLearner,
@@ -117,7 +116,7 @@ class Simulation:
                 self.rng,
                 self.n_budget_steps,
                 self.masked_env,
-                mab_algorithm=params.mab_algorithm,
+                mab_algorithm=params["mab_algorithm"],
             )
         elif self.step == Step.TWO:
             # Creation of alphaunitsless learner
@@ -125,7 +124,7 @@ class Simulation:
                 self.rng,
                 self.n_budget_steps,
                 self.masked_env,
-                mab_algorithm=params.mab_algorithm,
+                mab_algorithm=params["mab_algorithm"],
             )
         elif self.step == Step.THREE:
             # Creation of graphless learner
@@ -240,23 +239,70 @@ class Simulation:
             self.learner = self._learner_init(**learner_params)
 
 
+def create_n(
+    rng: Generator,
+    env: EnvironmentData,
+    step: Step = Step.ZERO,
+    n: int = 2,
+    n_budget_steps: int = 20,
+    population_mean: int = 100,
+    population_variance: int = 10,
+    **learner_params,
+):
+
+    """Helper function that simplifies the creation of multiple equal simulations at once
+
+    Arguments:
+        n: number of simulations to create
+
+        rng: randomness generator
+
+        env: environment where the simulation is going to be run
+
+        step: step number of the simulation, related to the various steps requested
+        by the project specification and corresponding to which properties
+        of the environment are masked to the learner and to which learner is going
+        to be instantiatiated
+
+        n_budget_steps: number of steps in which the budget must be divided
+
+        population_mean: expected value of the number of new potential
+        customers every day
+
+        population_variance: variance of the daily number of potential customers
+
+        learner_params: various parameters used to created the selected learner
+
+    Returns:
+        A list of new simulations with the parameters specified
+
+    """
+
+    return [
+        Simulation(
+            rng,
+            env,
+            step=step,
+            n_budget_steps=n_budget_steps,
+            population_mean=population_mean,
+            population_variance=population_variance,
+            **learner_params,
+        )
+        for i in range(n)
+    ]
+
+
 def simulate_n(
-    self,
-    simulation: Simulation,
-    n=2,
+    simulations: List[Simulation],
     n_days: int = 100,
     show_progress_graphs: bool = False,
 ):
 
-    """Function that automatically instatiates and runs n equal simulations with the sole purpose
-    of visualization (therefore the simulations aren't fully customizable and can't be modified
-    during the exection)
+    """Helper function that simplifies the act of running multiple simulations with the purpose
+    of visualization of the results
 
     Arguments:
-        simulation: simulation object for referencing parameters at creation time (it won't
-        actually be used)
-
-        n: number of experiments/simulations to run
+        simulations: list of simulation objects that will be run
 
         n_days: number of days to run each simulation for
 
@@ -268,10 +314,9 @@ def simulate_n(
 
     """
 
-    sims = [copy.deepcopy(simulation)] * n
     rewards = []
 
-    for sim in sims:
+    for sim in simulations:
         sim.simulate(n_days, show_progress_graphs)
         rewards.append(sim.rewards)
 
