@@ -310,7 +310,7 @@ def simulate_n(
         (if implemented) at each iteration
 
     Returns:
-        A list containing all the collected rewards obtained by running each experiment
+        A list containing all the collected rewards obtained by running all the simulations.
 
     """
 
