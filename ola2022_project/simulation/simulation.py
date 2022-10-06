@@ -174,7 +174,9 @@ class Simulation:
             logger.debug(f"Interactions: {interactions}")
 
             # Compute rewards from interactions
-            rewards = self._get_aggregated_reward_from_interactions(interactions)
+            rewards = _get_aggregated_reward_from_interactions(
+                self.env.product_prices, interactions
+            )
             self.rewards = np.append(self.rewards, rewards)
             logger.debug(f"Rewards: {rewards}")
 
@@ -187,38 +189,6 @@ class Simulation:
                 plt.show(block=True)
 
         self.tot_days += n_days
-
-    def _get_aggregated_reward_from_interactions(self, interactions: List[Interaction]):
-
-        """Computes the margin made each day, for each of the 3 classes of users.
-
-        Arguments:
-            interactions: A list of tuples, with a size corresponding to num_customers. Every
-            tuple denotes an interaction. tuple[0] is the user's class, which can be
-            1, 2 or 3. tuple[1] is a numpy array of 5 elemets, where every element i
-            represents how many of the products i+1 the customer bought
-
-            prices: Price of the 5 products
-
-        Returns:
-            An integer representing the total aggregated reward of the entire list of interactions.
-        """
-
-        # Creates a list contaninig only the number of units every customer bought
-        # for each product
-        units_sold = np.array([i.items_bought for i in interactions])
-
-        # First with np.sum() we compute a single array containing how many units we
-        # sold for every product. Then the units are multiplied element-wise by the
-        # price of the corresponding product
-        reward_per_product = (
-            np.sum(units_sold, axis=0) * self.env.product_prices
-            if len(units_sold) > 0
-            else np.array([])
-        )
-
-        # The profit of all the products are summed
-        return np.sum(reward_per_product)
 
     def reset(self, reset_learner: bool = False, **learner_params):
 
@@ -237,6 +207,43 @@ class Simulation:
         self.rewards = np.array([])
         if reset_learner:
             self.learner = self._learner_init(**learner_params)
+
+
+def _get_aggregated_reward_from_interactions(
+    product_prices, interactions: List[Interaction]
+):
+
+    """Computes the margin made each day, for each of the 3 classes of users.
+
+    Arguments:
+        product_prices: Reference product prices used to compute the reward
+
+        interactions: A list of tuples, with a size corresponding to num_customers. Every
+        tuple denotes an interaction. tuple[0] is the user's class, which can be
+        1, 2 or 3. tuple[1] is a numpy array of 5 elemets, where every element i
+        represents how many of the products i+1 the customer bought
+
+        prices: Price of the 5 products
+
+    Returns:
+        An integer representing the total aggregated reward of the entire list of interactions.
+    """
+
+    # Creates a list contaninig only the number of units every customer bought
+    # for each product
+    units_sold = np.array([i.items_bought for i in interactions])
+
+    # First with np.sum() we compute a single array containing how many units we
+    # sold for every product. Then the units are multiplied element-wise by the
+    # price of the corresponding product
+    reward_per_product = (
+        np.sum(units_sold, axis=0) * product_prices
+        if len(units_sold) > 0
+        else np.array([])
+    )
+
+    # The profit of all the products are summed
+    return np.sum(reward_per_product)
 
 
 def create_n(
