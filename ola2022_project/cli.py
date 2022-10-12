@@ -6,7 +6,11 @@ import matplotlib.pyplot as plt
 from ola2022_project import LoggingConfiguration
 from ola2022_project.environment.environment import example_environment, Step
 from ola2022_project.simulation.simulation import simulation as run_simulation
-from ola2022_project.learners import ClairvoyantLearner, StupidLearner  # noqa
+from ola2022_project.learners import (  # noqa
+    ClairvoyantLearner,
+    StupidLearner,
+    GraphlessLearner,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +24,13 @@ def main():
 @click.option("--verbose", "-v", is_flag=True, help="enable debug loggin")
 @click.option("--n_experiments", default=1, help="number of experiments to run")
 @click.option("--n_days", default=100, help="number of days for each experiment to run")
-def simulation(verbose, n_experiments, n_days):
+@click.option(
+    "--show_progress_graphs",
+    "-s",
+    is_flag=True,
+    help="show graphs of the learning progress",
+)
+def simulation(verbose, n_experiments, n_days, show_progress_graphs):
     # Setup logging, this could be changed to log to file or similar
     LoggingConfiguration("DEBUG" if verbose else "INFO")
 
@@ -33,12 +43,13 @@ def simulation(verbose, n_experiments, n_days):
     rewards_per_experiment = run_simulation(
         rng=rng,
         env=env,
-        learner_factory=StupidLearner,
-        n_customers_mean=10,
-        n_customers_variance=1,
+        learner_factory=GraphlessLearner,
+        population_mean=100,
+        population_variance=1,
         n_days=n_days,
         n_experiment=n_experiments,
-        step=Step.ZERO,
+        step=Step.THREE,
+        show_progress_graphs=show_progress_graphs,
     )
     logger.debug(f"Rewards per experiment: {rewards_per_experiment}")
 
