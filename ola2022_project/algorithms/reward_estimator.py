@@ -1,15 +1,14 @@
-from typing import List
 import numpy as np
 from ola2022_project.environment.environment import (
     EnvironmentData,
-    UserClassParameters,
     alpha_function,
+    get_day_of_interactions,
 )
 
 from ola2022_project.optimization import budget_assignment
 
 
-def find_optimal_arms(
+def find_optimal_superarm(
     env: EnvironmentData, budget_steps: np.ndarray, population: int, aggregated=True
 ):
 
@@ -17,106 +16,41 @@ def find_optimal_arms(
     n_budget_steps = len(budget_steps)
     n_classes = len(env.class_ratios)
 
-    budget_value = np.array([])
+    budget_value = np.zeros((n_products, n_budget_steps))
+    multipliers = compute_reward_multiplier(env)
 
-    for user_class_parameters, ratio in zip(env.classes_parameters, env.class_ratios):
-
-        class_budget_value_matrix = np.array([])
-        class_multipliers = compute_reward_multiplier(env, user_class_parameters)
-
-        for product_paramters in user_class_parameters:
-
-            for step in budget_steps:
-                class_budget_value_matrix = np.append(
-                    class_budget_value_matrix,
-                    alpha_function(
-                        step,
-                        product_paramters.upper_bound,
-                        product_paramters.max_useful_budget,
-                    )
-                    * ratio
-                    * population,
+    for i in range(n_products):
+        for j, budget in enumerate(budget_steps):
+            for user_class in range(n_classes):
+                params = env.classes_parameters[user_class][i]
+                budget_value[i, j] += (
+                    alpha_function(budget, params.upper_bound, params.max_useful_budget)
+                    * multipliers[i]
                 )
-
-        class_budget_value_matrix = np.reshape(
-            class_budget_value_matrix, (n_products, n_budget_steps)
-        )
-        class_budget_value_matrix = (
-            class_budget_value_matrix * np.atleast_2d(class_multipliers).T
-        )
-
-        np.append(budget_value, class_budget_value_matrix)
-
-    if aggregated:
-        budget_value = np.sum(budget_value, axis=0)
-
-    else:
-        budget_value = np.reshape(
-            budget_value, (n_products * n_classes, n_budget_steps)
-        )
 
     return budget_assignment(budget_value)
 
 
 def compute_reward_multiplier(
-    env: EnvironmentData, class_parameters: List[UserClassParameters]
+    env: EnvironmentData, population=1000, budget=[100, 100, 100, 100, 100]
 ):
 
-    prices = np.array(env.product_prices)
-    n_products = len(env.product_prices)
-    reservation_prices = [product.reservation_price for product in class_parameters]
+    interactions = get_day_of_interactions(
+        np.random.default_rng(), population, budget, env, deterministic=True
+    )
+    interactions_per_product = [
+        [elem.items_bought for elem in interactions if elem.landed_on == i]
+        for i in range(len(env.product_prices))
+    ]
 
-    reward_multiplier = list()
+    units_sold_per_product = [
+        np.sum(items, axis=0) for items in interactions_per_product
+    ]
+    n_users_landed_per_product = [len(items) for items in interactions_per_product]
 
-    for product in range(n_products):
-
-        conversion_rates = np.zeros(n_products)
-
-        conversion_rates = _simulate_interaction(
-            product, env, reservation_prices, conversion_rates, 1
+    return [
+        np.sum(total_units_sold * env.product_prices, axis=0) / n_users
+        for total_units_sold, n_users in zip(
+            units_sold_per_product, n_users_landed_per_product
         )
-
-        reward = np.sum(prices * np.array(conversion_rates))
-        reward_multiplier.append(reward)
-
-    return reward_multiplier
-
-
-def _simulate_interaction(
-    current_product,
-    classes_left,
-    env: EnvironmentData,
-    reservation_prices,
-    conversion_rates,
-    graph_value,
-):
-    if reservation_prices[current_product] >= reservation_prices[current_product]:
-        return conversion_rates
-
-    conversion_rates[current_product] = graph_value
-
-    slot1, slot2 = env.next_products[current_product]
-
-    if conversion_rates[slot1] == 0:
-        conversion_rates = _simulate_interaction(
-            slot1,
-            classes_left,
-            env,
-            reservation_prices,
-            conversion_rates,
-            conversion_rates[current_product] * env.graph[current_product, slot1],
-        )
-
-    if conversion_rates[slot2] == 0:
-        conversion_rates = _simulate_interaction(
-            slot2,
-            classes_left,
-            env,
-            reservation_prices,
-            conversion_rates,
-            conversion_rates[current_product]
-            * env.lam
-            * env.graph[current_product, slot2],
-        )
-
-    return conversion_rates
+    ]

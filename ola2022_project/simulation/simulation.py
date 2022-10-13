@@ -168,7 +168,10 @@ class Simulation:
 
             # Compute interactions for the entire day
             interactions = get_day_of_interactions(
-                self.rng, population, budgets, self.env
+                self.rng,
+                population,
+                budgets,
+                self.env,
             )
             self.dataset = np.append(self.dataset, interactions)
             logger.debug(f"Interactions: {interactions}")
