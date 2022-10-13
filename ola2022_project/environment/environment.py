@@ -35,6 +35,10 @@ AggregatedInteraction = namedtuple(
     "AggregatedInteraction", ["items_bought", "landed_on"]
 )
 
+InteractionBlueprint = namedtuple(
+    "InteractionBlueprint", ["user_class", "landed_on", "n_users", "products", "path"]
+)
+
 
 class Step(Enum):
 
@@ -90,6 +94,8 @@ class EnvironmentData:
     # List that constains for every i+1 product the secondary i+1 products that will be shown
     # in the first and second slot
     next_products: List[Tuple[int, int]]
+
+    random_noise: float
 
 
 @dataclass
@@ -188,6 +194,16 @@ def example_environment(
     graph_fully_connected=True,
     graph_zeros_probability=0.5,
     next_products=[(2, 3), (0, 2), (1, 4), (4, 1), (3, 0)],
+    random_noise=0.01,
+    graph=np.array(
+        [
+            [0, 0, 0.7, 0.4, 0],
+            [0.3, 0, 0.8, 0, 0],
+            [0, 0.2, 0, 0, 0.2],
+            [0, 0.9, 0, 0, 0.8],
+            [0.05, 0, 0, 0.25, 0],
+        ]
+    ),
 ):
 
     """Creates an environment with sample data. Single arguments can be
@@ -227,9 +243,10 @@ def example_environment(
     """
 
     # Graph is generated accoring to indications
-    graph = generate_graph(
-        rng, len(product_prices), graph_fully_connected, graph_zeros_probability
-    )
+    if graph is None:
+        graph = generate_graph(
+            rng, len(product_prices), graph_fully_connected, graph_zeros_probability
+        )
 
     return EnvironmentData(
         total_budget=total_budget,
@@ -241,6 +258,7 @@ def example_environment(
         max_items=max_items,
         graph=graph,
         next_products=next_products,
+        random_noise=random_noise,
     )
 
 
@@ -407,7 +425,7 @@ def get_day_of_interactions(
     else:
         raise RuntimeError(f"Invalid budget shape: {np.shape(budgets)}")
 
-    total_interactions = list()
+    # total_interactions = list()
 
     # Generate interactions for every class
     for user_class, (class_population, class_parameters, assigned_budget) in enumerate(
@@ -444,6 +462,24 @@ def get_day_of_interactions(
         # According to product ratios, for every product the computed number of
         # users lands on the correct product and the interaction starts
         for product, n_users in enumerate(users_landing_on_pages):
+
+            products = np.zeros(len(env_data.product_prices))
+            interaction_blueprints = []
+            path = []
+            interaction_blueprints = _simulate_interaction(
+                rng,
+                env_data,
+                n_users,
+                user_class,
+                products,
+                product,
+                path,
+                interaction_blueprints,
+                product,
+            )
+
+            return interaction_blueprints
+            """
             for _ in range(n_users):
                 user_class, items, edges = _get_interaction(
                     rng, user_class, product, env_data
@@ -457,11 +493,107 @@ def get_day_of_interactions(
                         product,
                         edges,
                     )
-                )
+                )"""
 
     # Shuffle the list to make data more realistic
-    rng.shuffle(total_interactions)
-    return total_interactions
+    # rng.shuffle(total_interactions)
+    # return total_interactions
+
+
+def _simulate_interaction(
+    rng,
+    env_data: EnvironmentData,
+    n_clicks,
+    user_class,
+    products_bought,
+    primary_product,
+    path,
+    interactions_blueprints,
+    first_product,
+):
+    print("--------------------------")
+    print(f"PATH: {path}\nPROD: {primary_product}")
+
+    product_price = env_data.product_prices[primary_product]
+
+    if (
+        env_data.classes_parameters[user_class][primary_product].reservation_price
+        >= product_price
+    ):
+        products_bought[primary_product] = 1
+
+        slot1 = env_data.next_products[primary_product][0]
+        slot2 = env_data.next_products[primary_product][1]
+
+        slot1_path = path.copy()
+        slot1_path.append((primary_product, slot1))
+        slot2_path = path.copy()
+        slot2_path.append((primary_product, slot2))
+
+        slot1_products_bought = products_bought.copy()
+        slot2_products_bought = products_bought.copy()
+
+        n_users_click_slot_1 = 0
+        if products_bought[slot1] == 0:
+            print("Slot1")
+            print(f"Path pre function: {slot1_path}")
+            n_users_click_slot_1 = np.rint(
+                n_clicks
+                * rng.normal(
+                    env_data.graph[primary_product, slot1], env_data.random_noise
+                )
+            )
+            _simulate_interaction(
+                rng,
+                env_data,
+                n_users_click_slot_1,
+                user_class,
+                slot1_products_bought,
+                slot1,
+                slot1_path,
+                interactions_blueprints,
+                first_product,
+            )
+
+        n_users_click_slot_2 = 0
+        if products_bought[slot2] == 0:
+            print("Slot2")
+            print(f"Path pre function: {slot2_path}")
+            n_users_click_slot_2 = np.rint(
+                (n_clicks - n_users_click_slot_1)
+                * rng.normal(
+                    env_data.graph[primary_product, slot2], env_data.random_noise
+                )
+                * env_data.lam
+            )
+            _simulate_interaction(
+                rng,
+                env_data,
+                n_users_click_slot_2,
+                user_class,
+                slot2_products_bought,
+                slot2,
+                slot2_path,
+                interactions_blueprints,
+                first_product,
+            )
+
+        n_users_stopping = n_clicks - n_users_click_slot_1 - n_users_click_slot_2
+
+        interactions_blueprints.append(
+            InteractionBlueprint(
+                user_class, first_product, n_users_stopping, products_bought, path
+            )
+        )
+
+    else:
+        interactions_blueprints.append(
+            InteractionBlueprint(
+                user_class, first_product, n_clicks, products_bought, path
+            )
+        )
+
+    return interactions_blueprints
 
 
 def _go_to_page(rng, user_class, primary_product, items_bought, edges, env_data):
