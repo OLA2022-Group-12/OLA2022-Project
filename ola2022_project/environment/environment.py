@@ -372,7 +372,7 @@ def get_day_of_interactions(
     population,
     budgets,
     env_data: EnvironmentData,
-    de_noise=50,
+    de_noise=1e3,
     deterministic=False,
 ):
 

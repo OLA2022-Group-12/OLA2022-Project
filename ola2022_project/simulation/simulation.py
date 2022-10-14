@@ -133,9 +133,7 @@ class Simulation:
             raise NotImplementedError(f"cannot handle step {self.step} yet")
 
     def simulate(
-        self,
-        n_days: int = 100,
-        show_progress_graphs: bool = False,
+        self, n_days: int = 100, show_progress_graphs: bool = False, deterministic=False
     ):
 
         """Simulates a given number of days of the simulation while appending all the
@@ -168,10 +166,7 @@ class Simulation:
 
             # Compute interactions for the entire day
             interactions = get_day_of_interactions(
-                self.rng,
-                population,
-                budgets,
-                self.env,
+                self.rng, population, budgets, self.env, deterministic=deterministic
             )
             self.dataset = np.append(self.dataset, interactions)
             logger.debug(f"Interactions: {interactions}")

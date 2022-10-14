@@ -8,8 +8,26 @@ from ola2022_project.environment.environment import (
 from ola2022_project.optimization import budget_assignment
 
 
+def clairvoyant_reward(
+    env: EnvironmentData, population: int, max_budget: int, n_budget_steps: int
+):
+
+    budget_steps = np.linspace(0, max_budget, n_budget_steps)
+
+    optimal_superarm = find_optimal_superarm(env, budget_steps)
+    optimal_assignment = budget_steps[optimal_superarm]
+
+    deterministic_day = get_day_of_interactions(
+        np.random.default_rng(), population, optimal_assignment, env, deterministic=True
+    )
+    units_sold = np.array(
+        [interaction.items_bought for interaction in deterministic_day]
+    )
+    return np.sum(units_sold * env.product_prices) * np.mean([1, env.max_items])
+
+
 def find_optimal_superarm(
-    env: EnvironmentData, budget_steps: np.ndarray, population: int, aggregated=True
+    env: EnvironmentData, budget_steps: np.ndarray, aggregated=True
 ):
 
     n_products = len(env.product_prices)
