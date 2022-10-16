@@ -340,7 +340,7 @@ def get_day_of_interactions(
     population,
     budgets,
     env_data: EnvironmentData,
-    de_noise=1e2,
+    de_noise=1e3,
     deterministic=False,
 ):
 
@@ -464,9 +464,11 @@ def get_day_of_interactions(
 
     # Generate interactions starting from blueprints and shuffle them to make
     # data more realistic
-    return rng.shuffle(
-        _generate_interactions(interaction_blueprints, env_data, rng, deterministic)
+    total_interactions = _generate_interactions(
+        interaction_blueprints, env_data, rng, deterministic
     )
+    rng.shuffle(total_interactions)
+    return total_interactions
 
 
 def _simulate_interaction(
