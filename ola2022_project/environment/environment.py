@@ -488,7 +488,7 @@ def _simulate_interaction(
     parameters and outputs blueprints for every possible interaction.
 
     Arguments:
-        rng: an instance of numpy.random.defaut_rng()
+        rng: an instance of numpy.random.default_rng()
 
         env_data: an instance of EnvironmentData
 

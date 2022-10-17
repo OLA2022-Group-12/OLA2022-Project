@@ -8,9 +8,9 @@ from ola2022_project.environment.environment import (
 from ola2022_project.optimization import budget_assignment
 
 
-"""WARNING: this module does not work 100% correctly! For some reason, the function
-find_optimal_superarm is flawed because in some condition doesn't the optimal superarm
-but a close one.
+"""WARNING: this module does not work correctly 100% of the time! For some reason, the function
+find_optimal_superarm is flawed because in some condition isn't able to find the optimal superarm
+but only a close one. - TODO
 """
 
 
@@ -37,7 +37,7 @@ def clairvoyant_reward(
         could be surpassed by a learner sometimes. This is perfectly normal.
     """
 
-    budget_steps = np.linspace(0, max_budget, n_budget_steps)
+    budget_steps = np.linspace(0, max_budget, n_budget_steps + 1)
 
     optimal_superarm = find_optimal_superarm(env, budget_steps)
     optimal_assignment = budget_steps[optimal_superarm]
@@ -55,6 +55,24 @@ def clairvoyant_reward(
 def find_optimal_superarm(
     env: EnvironmentData, budget_steps: np.ndarray, aggregated=True
 ):
+
+    """Given an environment and a numpy array of budget steps finds the optimal
+    superarm to play in such environment given the specified budget steps.
+
+    Arguments:
+        env: an instance of EnvironmentData
+
+        budget_steps: numpy array with n_budget_steps + 1 elements, ranging from 0
+            to max_budget
+
+        aggregated: if set to False will generate different superarms for each class.
+            STILL NOT IMPLEMENTED.
+
+    Returns:
+        An array with P elements (where P is the number of product subcampaigns).
+        Every element represents the assigned budget to the i-th subcampaign.
+        The total sum amounts to max_budget.
+    """
 
     n_products = len(env.product_prices)
     n_budget_steps = len(budget_steps)
@@ -78,6 +96,7 @@ def find_optimal_superarm(
 def _compute_reward_multiplier(
     env: EnvironmentData, population=1000, budget=[100, 100, 100, 100, 100]
 ):
+
     """Computes reward multipliers for every product. Basically reward multiplier tells
     how much profit a single product will bring on average, according to all the possible
     paths on the graph. The parameters pupolation and budget are dummy parameters, they
