@@ -66,7 +66,7 @@ def find_optimal_superarm(
             to max_budget
 
         aggregated: if set to False will generate different superarms for each class.
-            STILL NOT IMPLEMENTED.
+            STILL NOT IMPLEMENTED. - TODO
 
     Returns:
         An array with P elements (where P is the number of product subcampaigns).
