@@ -1,4 +1,4 @@
-import enum
+from aenum import Enum, NoAlias
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as Ck
@@ -116,6 +116,9 @@ class GPUCB1Learner(GPTSLearner):
         return upper_bounds
 
 
-class Mab(enum.Enum):
+class Mab(Enum):
+
+    _settings_ = NoAlias
+
     GPTS = ()
     GPUCB1 = ()
