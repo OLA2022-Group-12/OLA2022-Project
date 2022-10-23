@@ -6,7 +6,7 @@ from ola2022_project.learners import (
     AlphaUnitslessLearner,
     GraphlessLearner,
 )
-from tqdm.notebook import trange
+from tqdm.notebook import trange, tqdm_notebook
 from ola2022_project.environment.environment import (
     get_day_of_interactions,
     create_masked_environment,
@@ -18,6 +18,7 @@ from typing import List
 import numpy as np
 from numpy.random import Generator
 import matplotlib.pyplot as plt
+import copy
 
 
 logger = logging.getLogger(__name__)
@@ -71,8 +72,9 @@ class Simulation:
         self.n_budget_steps = n_budget_steps
         self.population_mean = population_mean
         self.population_variance = population_variance
+        self.learner_params = learner_params
 
-        self.reset(True, **learner_params)
+        self.reset(True)
 
     @property
     def step(self):
@@ -92,13 +94,10 @@ class Simulation:
         self._env = value
         self.masked_env = create_masked_environment(self.step, self.env)
 
-    def _learner_init(self, **params):
+    def _learner_init(self):
 
         """Creates a new learner utilizing the current simulation step and the
         given learner creation parameters.
-
-        Arguments:
-            params: learner creation parameters
 
         Returns:
             A new untrained learner depending on the current simulation step
@@ -116,7 +115,7 @@ class Simulation:
                 self.rng,
                 self.n_budget_steps,
                 self.masked_env,
-                mab_algorithm=params["mab_algorithm"],
+                mab_algorithm=self.learner_params["mab_algorithm"],
             )
         elif self.step == Step.TWO:
             # Creation of alphaunitsless learner
@@ -124,7 +123,7 @@ class Simulation:
                 self.rng,
                 self.n_budget_steps,
                 self.masked_env,
-                mab_algorithm=params["mab_algorithm"],
+                mab_algorithm=self.learner_params["mab_algorithm"],
             )
         elif self.step == Step.THREE:
             # Creation of graphless learner
@@ -170,7 +169,7 @@ class Simulation:
             interactions = get_day_of_interactions(
                 self.rng, population, budgets, self.env
             )
-            self.dataset = np.append(self.dataset, interactions)
+            self.dataset.append(interactions)
             logger.debug(f"Interactions: {interactions}")
 
             # Compute rewards from interactions
@@ -190,23 +189,88 @@ class Simulation:
 
         self.tot_days += n_days
 
-    def reset(self, reset_learner: bool = False, **learner_params):
+    def simulate_from_dataset(
+        self,
+        dataset: List[Interaction],
+        update: bool = False,
+        show_progress_graphs: bool = False,
+    ):
+
+        """Simulates data present in a given dataset.
+
+        Arguments:
+            dataset: dataset contaninig the interactions to simulate
+
+            update: flag to decide whether to update or not the current learner
+
+            show_progress_graphs: if set to True, will visualize the learner progress graphs
+            (if implemented) at each iteration
+
+        Returns:
+            the set of rewards produced by the simulation.
+        """
+
+        cumulated_rewards = np.array([])
+
+        for day in tqdm_notebook(dataset, desc="day"):
+            if day:
+                # Ask the learner to estimate the budgets to assign
+                budgets = self.learner.predict(self.masked_env)
+
+                logger.debug(f"Interactions: {day}")
+
+                # Compute rewards from interactions
+                rewards = _get_aggregated_reward_from_interactions(
+                    self.env.product_prices, day
+                )
+                cumulated_rewards = np.append(cumulated_rewards, rewards)
+                logger.debug(f"Rewards: {rewards}")
+
+                # Update learner with new observed reward
+                if update:
+                    self.dataset.append(day)
+                    self.rewards = np.append(self.rewards, rewards)
+                    self.learner.learn(day, rewards, budgets)
+
+                if show_progress_graphs:
+                    fig = plt.figure()
+                    self.learner.show_progress(fig)
+                    plt.show(block=True)
+
+        return cumulated_rewards
+
+    def reset(self, reset_learner: bool = False):
 
         """Resets the dynamic parameters of the simulation to their initial values.
 
         Arguments:
             reset_learner: if set to True, will also reset the learner by creating a new one
             utilizing the current simulation step as a reference
-
-            learner_params: if the reset_learner flag is set to True, the learner_params will
-            be passed to the new learner that will be created
         """
 
         self.tot_days = 0
-        self.dataset = np.array([])
+        self.dataset = []
         self.rewards = np.array([])
         if reset_learner:
-            self.learner = self._learner_init(**learner_params)
+            self.learner = self._learner_init()
+
+    def copy(self):
+
+        """Generates a new Simulation copying the parameters of the current simulation
+
+        Returns:
+            a new copied Simulation object
+        """
+
+        return Simulation(
+            self.rng,
+            copy.copy(self.env),
+            self.step,
+            self.n_budget_steps,
+            self.population_mean,
+            self.population_variance,
+            **self.learner_params,
+        )
 
 
 def _get_aggregated_reward_from_interactions(

@@ -4,10 +4,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 from ola2022_project.utils import compute_hoeffding_bound, flatten_list
 from ola2022_project.environment.environment import Feature
-from ola2022_project.simulation.dataset_simulation import (
-    dataset_simulation,
-    DatasetSimParameters,
-)
+from ola2022_project.simulation.simulation import Simulation
 
 
 logger = logging.getLogger(__name__)
@@ -139,7 +136,7 @@ def _feature_filter(dataset, features: List[Feature]):
 
 
 def _feature_split(
-    sim_param: DatasetSimParameters,
+    sim_model: Simulation,
     dataset,
     context: Context = None,
     feature: Feature = None,
@@ -151,8 +148,8 @@ def _feature_split(
     present, the function generates a single new base aggregated context over the dataset.
 
     Arguments:
-        sim_param: parameters used by the dataset simulation to operate the learner and the
-            environment
+        sim_model: simulation model containing the parameters that will be used by the dataset
+            simulation to operate the learner and the environment
 
         dataset: current offline dataset gathered over a span of time containing samples
             used to train new models and define context attributes
@@ -166,10 +163,11 @@ def _feature_split(
         given arguments
     """
 
+    # TODO: could be avoided by taking the past rewards
     if not context or not feature:
         # Base case for the root of the decision tree, where all features are aggregated
         # and no split is needed
-        reward = dataset_simulation(sim_param, dataset)
+        reward = sim_model.simulate_from_dataset(dataset)
         n = sum([len(d) for d in dataset])
         # TODO: max expected reward (temporary solution: mean reward over dataset)
         max_exp_reward = np.mean(sum(reward, []))
@@ -188,21 +186,21 @@ def _feature_split(
 
     # Return the two contexts, each evaluating a value of the split feature
     return [
-        _feature_half_split(sim_param, dataset, context, feature_1),
-        _feature_half_split(sim_param, dataset, context, feature_2),
+        _feature_half_split(sim_model.copy(), dataset, context, feature_1),
+        _feature_half_split(sim_model.copy(), dataset, context, feature_2),
     ]
 
 
 def _feature_half_split(
-    sim_param: DatasetSimParameters, dataset, context: Context, feature: Feature
+    sim_model: Simulation, dataset, context: Context, feature: Feature
 ) -> Context:
 
     """Generates, trains and evaluates over a given dataset a new context based on half of a feature
     binary split.
 
     Arguments:
-        sim_param: parameters used by the dataset simulation to operate the learner and the
-            environment
+        sim_model: simulation model containing the parameters that will be used by the dataset
+            simulation to operate the learner and the environment
 
         dataset: current offline dataset gathered over a span of time containing samples
             used to train new models and define context attributes
@@ -230,7 +228,7 @@ def _feature_half_split(
 
         exp_prob = n_split / context.nums
         # Simulate interactions using the dataset
-        reward = dataset_simulation(sim_param, dataset_split)
+        reward = sim_model.simulate_from_dataset(dataset_split, update=True)
         # TODO: max expected reward (temporary solution: mean reward over dataset)
         max_exp_reward = np.mean(sum(reward, []))
         # Compute the weighted bound
@@ -252,7 +250,7 @@ def _feature_half_split(
 
 
 def tree_generation(
-    sim_param: DatasetSimParameters, dataset, features: List[Feature]
+    sim_reference: Simulation, dataset, features: List[Feature]
 ) -> List[Context]:
 
     """Computes the feature tree for a given dataset and set of features, it utilizes a
@@ -264,8 +262,8 @@ def tree_generation(
     features of the dataset effectively.
 
     Arguments:
-        sim_param: parameters used by the dataset simulation to operate the learner and the
-            environment
+        sim_reference: simulation reference from which the parameters will be copied and used
+            to construct new simulations that operate on the dataset
 
         dataset: current offline dataset gathered over a span of time, containing samples
             used to train new models and define context attributes
@@ -276,15 +274,22 @@ def tree_generation(
         A list containing the contexts chosen by the algorithm
     """
 
+    # TODO: use a single sim_model throughout the tree to reduce copies
+    # sim_model = sim_reference.copy()
+
     # Obtain the base context at the root of the tree
-    base_context = _feature_split(sim_param, dataset)
+    # TODO: hidden information are passed to the learners, which isn't really a big deal
+    #       in this case, however we might want to hide them (NOT PRIORITARY)
+    base_context = _feature_split(sim_reference.copy(), dataset)
     # Start generating tree recursively
-    optimal_contexts = _generate_tree_node(sim_param, dataset, features, base_context)
+    optimal_contexts = _generate_tree_node(
+        sim_reference.copy(), dataset, features, base_context
+    )
     return optimal_contexts if optimal_contexts else base_context
 
 
 def partial_tree_generation(
-    sim_param: DatasetSimParameters,
+    sim_reference: Simulation,
     dataset,
     features: List[Feature],
     root: List[Context],
@@ -294,8 +299,8 @@ def partial_tree_generation(
     of contexts.
 
     Arguments:
-        sim_param: parameters used by the dataset simulation to operate the learner and the
-            environment
+        sim_reference: simulation reference from which the parameters will be copied and used
+            to construct new simulations that operate on the dataset
 
         dataset: current offline dataset gathered over a span of time, containing samples
             used to train new models and define context attributes
@@ -309,11 +314,14 @@ def partial_tree_generation(
         A list containing the contexts chosen by the algorithm
     """
 
+    # TODO: use a single sim_model throughout the tree to reduce copies
+    # sim_model = sim_reference.copy()
+
     ret_contexts = list(
         map(
             lambda context: _none_context(
                 context,
-                _generate_tree_node(sim_param, dataset, features, context),
+                _generate_tree_node(sim_reference.copy(), dataset, features, context),
             ),
             root,
         )
@@ -322,7 +330,7 @@ def partial_tree_generation(
 
 
 def _generate_tree_node(
-    sim_param: DatasetSimParameters,
+    sim_model: Simulation,
     dataset,
     unsplit_features: List[Feature],
     base_context: Context,
@@ -338,8 +346,8 @@ def _generate_tree_node(
     containing the set of "optimal" contexts is returned.
 
     Arguments:
-        sim_param: parameters used by the dataset simulation to operate the learner and the
-            environment
+        sim_model: simulation model containing the parameters that will be used by the dataset
+            simulation to operate the learner and the environment
 
         dataset: current offline dataset gathered over a span of time, containing samples
             used to train new models and define context attributes
@@ -359,7 +367,9 @@ def _generate_tree_node(
     # Generate all the possible splits for a single feature
     split_contexts = list(
         map(
-            lambda feature: _feature_split(sim_param, dataset, base_context, feature),
+            lambda feature: _feature_split(
+                sim_model.copy(), dataset, base_context, feature
+            ),
             unsplit_features,
         )
     )
@@ -399,7 +409,7 @@ def _generate_tree_node(
             map(
                 lambda context: _none_context(
                     context,
-                    _generate_tree_node(sim_param, dataset, new_features, context),
+                    _generate_tree_node(sim_model, dataset, new_features, context),
                 ),
                 best_split,
             )
