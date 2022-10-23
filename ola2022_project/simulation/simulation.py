@@ -131,11 +131,7 @@ class Simulation:
         else:
             raise NotImplementedError(f"cannot handle step {self.step} yet")
 
-    def simulate(
-        self,
-        n_days: int = 100,
-        show_progress_graphs: bool = False,
-    ):
+    def simulate(self, n_days: int = 100, show_progress_graphs: bool = False):
 
         """Simulates a given number of days of the simulation while appending all the
         results to the dedicated simulation attributes.

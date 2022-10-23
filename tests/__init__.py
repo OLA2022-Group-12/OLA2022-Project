@@ -135,6 +135,7 @@ def generated_environment(draw):
     ]
 
     next_products = draw(next_products_st)
+    random_noise = st.floats(min_value=1e-16, max_value=0.1)
 
     return EnvironmentData(
         total_budget=total_budget,
@@ -146,4 +147,5 @@ def generated_environment(draw):
         max_items=max_items,
         graph=graph,
         next_products=next_products,
+        random_noise=random_noise,
     )
