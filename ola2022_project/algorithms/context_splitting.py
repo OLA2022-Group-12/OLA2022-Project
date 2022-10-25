@@ -3,7 +3,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional
 from ola2022_project.utils import compute_hoeffding_bound, flatten_list
-from ola2022_project.environment.environment import Feature
+from ola2022_project.environment.environment import Feature, feature_filter
 from ola2022_project.simulation.simulation import Simulation
 
 
@@ -104,42 +104,12 @@ def _split_condition(
     )
 
 
-def _feature_filter(dataset, features: List[Feature]):
-
-    """Filters the elements of a dataset given a set of wanted features.
-
-    Arguments:
-        dataset: dataset to filter
-
-        features: features to discriminate
-
-    Returns:
-        A new dataset composed only of interactions that satisfy the given features
-    """
-
-    filtered_dataset = []
-    for dataset_day in dataset:
-        # Select only the interactions made by users that respect the features specified
-        # in the features parameter, this is done by iterating over every day in the dataset
-        # and every interaction in each day
-        filtered_dataset.append(
-            list(
-                filter(
-                    lambda interaction: all(
-                        (feature in interaction.user_features) for feature in features
-                    ),
-                    dataset_day,
-                )
-            )
-        )
-    return filtered_dataset
-
-
 def _feature_split(
     sim_model: Simulation,
     dataset,
     context: Context = None,
     feature: Feature = None,
+    exp: bool = True,
 ) -> List[Context]:
 
     """Generates, trains and evaluates over a given dataset new contexts based on a feature split,
@@ -167,10 +137,13 @@ def _feature_split(
     if not context or not feature:
         # Base case for the root of the decision tree, where all features are aggregated
         # and no split is needed
-        reward = sim_model.simulate_from_dataset(dataset)
+        if exp:
+            reward = sim_model.simulate_from_dataset_exp(dataset)
+        else:
+            reward = sim_model.simulate_from_dataset(dataset)
         n = sum([len(d) for d in dataset])
         # TODO: max expected reward (temporary solution: mean reward over dataset)
-        max_exp_reward = np.mean(sum(reward, []))
+        max_exp_reward = np.mean(reward)
 
         return Context(
             [],  # In the base model all features are aggregated
@@ -186,13 +159,13 @@ def _feature_split(
 
     # Return the two contexts, each evaluating a value of the split feature
     return [
-        _feature_half_split(sim_model.copy(), dataset, context, feature_1),
-        _feature_half_split(sim_model.copy(), dataset, context, feature_2),
+        _feature_half_split(sim_model.copy(), dataset, context, feature_1, exp),
+        _feature_half_split(sim_model.copy(), dataset, context, feature_2, exp),
     ]
 
 
 def _feature_half_split(
-    sim_model: Simulation, dataset, context: Context, feature: Feature
+    sim_model: Simulation, dataset, context: Context, feature: Feature, exp: bool = True
 ) -> Context:
 
     """Generates, trains and evaluates over a given dataset a new context based on half of a feature
@@ -218,19 +191,26 @@ def _feature_half_split(
     features.append(feature)
 
     # Obtain the filtered dataset over the feature
-    dataset_split = _feature_filter(dataset, features)
+    dataset_split = feature_filter(dataset, features)
 
     # Count total number of samples for datasets and expected probability of a sample
     # presenting the feature of interest
     n_split = sum([len(d) for d in dataset_split])
 
     if n_split:
-
         exp_prob = n_split / context.nums
         # Simulate interactions using the dataset
-        reward = sim_model.simulate_from_dataset(dataset_split, update=True)
+        if exp:
+            # Training simulation
+            sim_model.simulate_from_dataset_exp(dataset, features=features, update=True)
+            # Update number of training samples
+            n_split = sum([len(d) for d in sim_model.dataset])
+            # Reward simulation
+            reward = sim_model.simulate_from_dataset_exp(dataset, update=False)
+        else:
+            reward = sim_model.simulate_from_dataset(dataset_split)
         # TODO: max expected reward (temporary solution: mean reward over dataset)
-        max_exp_reward = np.mean(sum(reward, []))
+        max_exp_reward = np.mean(reward)
         # Compute the weighted bound
         weighted_bound = _compute_weighted_bound(
             context.nums, n_split, exp_prob, max_exp_reward
@@ -250,7 +230,7 @@ def _feature_half_split(
 
 
 def tree_generation(
-    sim_reference: Simulation, dataset, features: List[Feature]
+    sim_reference: Simulation, dataset, features: List[Feature], exp: bool = True
 ) -> List[Context]:
 
     """Computes the feature tree for a given dataset and set of features, it utilizes a
@@ -280,10 +260,10 @@ def tree_generation(
     # Obtain the base context at the root of the tree
     # TODO: hidden information are passed to the learners, which isn't really a big deal
     #       in this case, however we might want to hide them (NOT PRIORITARY)
-    base_context = _feature_split(sim_reference.copy(), dataset)
+    base_context = _feature_split(sim_reference.copy(), dataset, exp=exp)
     # Start generating tree recursively
     optimal_contexts = _generate_tree_node(
-        sim_reference.copy(), dataset, features, base_context
+        sim_reference.copy(), dataset, features, base_context, exp
     )
     return optimal_contexts if optimal_contexts else base_context
 
@@ -293,6 +273,7 @@ def partial_tree_generation(
     dataset,
     features: List[Feature],
     root: List[Context],
+    exp: bool = True,
 ) -> List[Context]:
 
     """Performs the tree generation algorithm from a starting point represented by a set
@@ -321,7 +302,9 @@ def partial_tree_generation(
         map(
             lambda context: _none_context(
                 context,
-                _generate_tree_node(sim_reference.copy(), dataset, features, context),
+                _generate_tree_node(
+                    sim_reference.copy(), dataset, features, context, exp
+                ),
             ),
             root,
         )
@@ -334,6 +317,7 @@ def _generate_tree_node(
     dataset,
     unsplit_features: List[Feature],
     base_context: Context,
+    exp: bool = True,
 ) -> Optional[List[Context]]:
 
     """Recursive step for the feature tree generation; generates a new bifurcation inside
@@ -368,7 +352,7 @@ def _generate_tree_node(
     split_contexts = list(
         map(
             lambda feature: _feature_split(
-                sim_model.copy(), dataset, base_context, feature
+                sim_model.copy(), dataset, base_context, feature, exp
             ),
             unsplit_features,
         )
@@ -409,7 +393,7 @@ def _generate_tree_node(
             map(
                 lambda context: _none_context(
                     context,
-                    _generate_tree_node(sim_model, dataset, new_features, context),
+                    _generate_tree_node(sim_model, dataset, new_features, context, exp),
                 ),
                 best_split,
             )

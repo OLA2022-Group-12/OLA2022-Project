@@ -662,3 +662,35 @@ def _generate_interactions(
 
 def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteraction]:
     return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]
+
+
+# TODO: polish
+def feature_filter(dataset, features: List[Feature]):
+
+    """Filters the elements of a dataset given a set of wanted features.
+
+    Arguments:
+        dataset: dataset to filter
+
+        features: features to discriminate
+
+    Returns:
+        A new dataset composed only of interactions that satisfy the given features
+    """
+
+    filtered_dataset = []
+    for dataset_day in dataset:
+        # Select only the interactions made by users that respect the features specified
+        # in the features parameter, this is done by iterating over every day in the dataset
+        # and every interaction in each day
+        filtered_dataset.append(
+            list(
+                filter(
+                    lambda interaction: all(
+                        (feature in interaction.user_features) for feature in features
+                    ),
+                    dataset_day,
+                )
+            )
+        )
+    return filtered_dataset

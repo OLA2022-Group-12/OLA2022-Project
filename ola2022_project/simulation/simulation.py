@@ -10,9 +10,11 @@ from tqdm.notebook import trange, tqdm_notebook
 from ola2022_project.environment.environment import (
     get_day_of_interactions,
     create_masked_environment,
+    feature_filter,
     Step,
     Interaction,
     EnvironmentData,
+    Feature,
 )
 from typing import List
 import numpy as np
@@ -226,7 +228,69 @@ class Simulation:
                 if update:
                     self.dataset.append(day)
                     self.rewards = np.append(self.rewards, rewards)
-                    self.learner.learn(day, rewards, budgets)
+
+                self.learner.learn(day, rewards, budgets)
+
+                if show_progress_graphs:
+                    fig = plt.figure()
+                    self.learner.show_progress(fig)
+                    plt.show(block=True)
+
+        return cumulated_rewards
+
+    # TODO: overall ugly
+    def simulate_from_dataset_exp(
+        self,
+        dataset: List[Interaction],
+        update: bool = False,
+        features: List[Feature] = [],
+        show_progress_graphs: bool = False,
+    ):
+
+        """Simulates data present in a given dataset using experimental mode.
+
+        Arguments:
+            dataset: dataset contaninig the interactions to simulate
+
+            update: flag to decide whether to update or not the current learner
+
+            show_progress_graphs: if set to True, will visualize the learner progress graphs
+            (if implemented) at each iteration
+
+        Returns:
+            the set of rewards produced by the simulation.
+        """
+
+        cumulated_rewards = np.array([])
+
+        for day in tqdm_notebook(dataset, desc="day"):
+            if day:
+                # Ask the learner to estimate the budgets to assign
+                budgets = self.learner.predict(self.masked_env)
+
+                # Generate new interactions based on the dataset population
+                # TODO: hardcoded! FIX! NOW! FOR THE LOVE OF GOD!
+                population = 100
+                interactions = get_day_of_interactions(
+                    self.rng, population, budgets, self.env
+                )
+
+                # TODO ugly!!!
+                if features:
+                    interactions = feature_filter([interactions], features)[0]
+
+                # Compute rewards from interactions
+                rewards = _get_aggregated_reward_from_interactions(
+                    self.env.product_prices, interactions
+                )
+                cumulated_rewards = np.append(cumulated_rewards, rewards)
+                logger.debug(f"Rewards: {rewards}")
+
+                # Update learner with new observed reward
+                if update:
+                    self.dataset.append(interactions)
+                    self.rewards = np.append(self.rewards, rewards)
+                    self.learner.learn(interactions, rewards, budgets)
 
                 if show_progress_graphs:
                     fig = plt.figure()
