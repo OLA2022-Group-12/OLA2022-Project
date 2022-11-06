@@ -3,7 +3,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional
 from ola2022_project.utils import compute_hoeffding_bound, flatten_list
-from ola2022_project.environment.environment import Feature, feature_filter
+from ola2022_project.environment.environment import Feature
 from ola2022_project.simulation.simulation import Simulation
 
 
@@ -19,6 +19,9 @@ class Context:
     all the relevant information for choosing and evaluating different
     scenarios.
     """
+
+    # Simulation containing the training environment for the learner
+    learner_sim: Simulation
 
     # List of current context features
     features: List[Feature]
@@ -109,7 +112,6 @@ def _feature_split(
     dataset,
     context: Context = None,
     feature: Feature = None,
-    exp: bool = True,
 ) -> List[Context]:
 
     """Generates, trains and evaluates over a given dataset new contexts based on a feature split,
@@ -133,19 +135,19 @@ def _feature_split(
         given arguments
     """
 
-    # TODO: could be avoided by taking the past rewards
     if not context or not feature:
         # Base case for the root of the decision tree, where all features are aggregated
         # and no split is needed
-        if exp:
-            reward = sim_model.simulate_from_dataset_exp(dataset)
-        else:
-            reward = sim_model.simulate_from_dataset(dataset)
-        n = sum([len(d) for d in dataset])
+        sim_model.simulate(len(dataset))
+        n = sum([len(d) for d in sim_model.dataset])
         # TODO: max expected reward (temporary solution: mean reward over dataset)
-        max_exp_reward = np.mean(reward)
+        max_exp_reward = np.mean(sim_model.rewards)
+
+        logger.debug("Root context")
+        logger.debug(f"Maximum expected reward {max_exp_reward}")
 
         return Context(
+            sim_model,
             [],  # In the base model all features are aggregated
             n,
             1,  # Probability = 100%
@@ -159,13 +161,13 @@ def _feature_split(
 
     # Return the two contexts, each evaluating a value of the split feature
     return [
-        _feature_half_split(sim_model.copy(), dataset, context, feature_1, exp),
-        _feature_half_split(sim_model.copy(), dataset, context, feature_2, exp),
+        _feature_half_split(sim_model.copy(), dataset, context, feature_1),
+        _feature_half_split(sim_model.copy(), dataset, context, feature_2),
     ]
 
 
 def _feature_half_split(
-    sim_model: Simulation, dataset, context: Context, feature: Feature, exp: bool = True
+    sim_model: Simulation, dataset, context: Context, feature: Feature
 ) -> Context:
 
     """Generates, trains and evaluates over a given dataset a new context based on half of a feature
@@ -190,47 +192,59 @@ def _feature_half_split(
     features = context.features.copy()
     features.append(feature)
 
-    # Obtain the filtered dataset over the feature
-    dataset_split = feature_filter(dataset, features)
+    # Create and train a new context
+    new_context = Context(sim_model, features, 0, 0, 0, 0)
+    train_context(new_context, dataset)
+
+    return new_context
+
+
+def train_context(context: Context, dataset):
+
+    """Trains and evaluates a context by simulating interactions utilizing a dataset as a reference;
+    the context may be new or already trained, in the latter case only the difference in days
+    between the dataset and the context history is taken into consideration.
+
+    Arguments:
+        context: the context that will be trained and evaluated
+
+        dataset: current offline dataset gathered over a span of time containing samples
+            used to train new models and define context attributes
+    """
+
+    new_days = len(dataset) - len(context.learner_sim.dataset)
+
+    # Training simulation
+    context.learner_sim.simulate(new_days, context.features)
 
     # Count total number of samples for datasets and expected probability of a sample
-    # presenting the feature of interest
-    n_split = sum([len(d) for d in dataset_split])
+    # presenting the features of interest
+    context.nums = sum([len(d) for d in context.learner_sim.filtered_dataset])
+    context.exp_prob = context.nums / sum([len(d) for d in context.learner_sim.dataset])
 
-    if n_split:
-        exp_prob = n_split / context.nums
-        # Simulate interactions using the dataset
-        if exp:
-            # Training simulation
-            sim_model.simulate_from_dataset_exp(dataset, features=features, update=True)
-            # Update number of training samples
-            n_split = sum([len(d) for d in sim_model.dataset])
-            # Reward simulation
-            reward = sim_model.simulate_from_dataset_exp(dataset, update=False)
-        else:
-            reward = sim_model.simulate_from_dataset(dataset_split)
-        # TODO: max expected reward (temporary solution: mean reward over dataset)
-        max_exp_reward = np.mean(reward)
-        # Compute the weighted bound
-        weighted_bound = _compute_weighted_bound(
-            context.nums, n_split, exp_prob, max_exp_reward
-        )
-    else:
-        exp_prob = 0
-        max_exp_reward = 0
-        weighted_bound = 0
+    # Reward simulation
+    reward_sim = context.learner_sim.copy()
+    reward_sim.learner = context.learner_sim.learner
+    reward_sim.simulate(len(dataset), update=False)
 
-    return Context(
-        features,
-        n_split,
-        exp_prob,
-        max_exp_reward,
-        weighted_bound,
+    # Compute maximum expected reward and count samples
+    n_reward = sum([len(d) for d in reward_sim.dataset])
+    # TODO: max expected reward (temporary solution: mean reward over dataset)
+    context.max_exp_reward = np.mean(reward_sim.rewards)
+
+    # Compute the weighted bound
+    context.weighted_bound = _compute_weighted_bound(
+        context.nums, n_reward, context.exp_prob, context.max_exp_reward
     )
+
+    logger.debug(f"Context features {context.features}")
+    logger.debug(f"Expected probability {context.exp_prob}")
+    logger.debug(f"Maximum expected reward {context.max_exp_reward}")
+    logger.debug(f"Weighted lower bound {context.weighted_bound}")
 
 
 def tree_generation(
-    sim_reference: Simulation, dataset, features: List[Feature], exp: bool = True
+    sim_reference: Simulation, dataset, features: List[Feature]
 ) -> List[Context]:
 
     """Computes the feature tree for a given dataset and set of features, it utilizes a
@@ -254,16 +268,13 @@ def tree_generation(
         A list containing the contexts chosen by the algorithm
     """
 
-    # TODO: use a single sim_model throughout the tree to reduce copies
-    # sim_model = sim_reference.copy()
-
     # Obtain the base context at the root of the tree
     # TODO: hidden information are passed to the learners, which isn't really a big deal
     #       in this case, however we might want to hide them (NOT PRIORITARY)
-    base_context = _feature_split(sim_reference.copy(), dataset, exp=exp)
+    base_context = _feature_split(sim_reference.copy(), dataset)
     # Start generating tree recursively
     optimal_contexts = _generate_tree_node(
-        sim_reference.copy(), dataset, features, base_context, exp
+        sim_reference.copy(), dataset, features, base_context
     )
     return optimal_contexts if optimal_contexts else base_context
 
@@ -273,7 +284,6 @@ def partial_tree_generation(
     dataset,
     features: List[Feature],
     root: List[Context],
-    exp: bool = True,
 ) -> List[Context]:
 
     """Performs the tree generation algorithm from a starting point represented by a set
@@ -295,15 +305,15 @@ def partial_tree_generation(
         A list containing the contexts chosen by the algorithm
     """
 
-    # TODO: use a single sim_model throughout the tree to reduce copies
-    # sim_model = sim_reference.copy()
+    # Update experimental rewards of old base contexts
+    map(lambda context: train_context(context, dataset), root)
 
     ret_contexts = list(
         map(
             lambda context: _none_context(
                 context,
                 _generate_tree_node(
-                    sim_reference.copy(), dataset, features, context, exp
+                    context.learner_sim.copy(), dataset, features, context
                 ),
             ),
             root,
@@ -352,7 +362,7 @@ def _generate_tree_node(
     split_contexts = list(
         map(
             lambda feature: _feature_split(
-                sim_model.copy(), dataset, base_context, feature, exp
+                sim_model.copy(), dataset, base_context, feature
             ),
             unsplit_features,
         )

@@ -6,7 +6,7 @@ from ola2022_project.learners import (
     AlphaUnitslessLearner,
     GraphlessLearner,
 )
-from tqdm.notebook import trange, tqdm_notebook
+from tqdm.notebook import trange
 from ola2022_project.environment.environment import (
     get_day_of_interactions,
     create_masked_environment,
@@ -133,13 +133,24 @@ class Simulation:
         else:
             raise NotImplementedError(f"cannot handle step {self.step} yet")
 
-    def simulate(self, n_days: int = 100, show_progress_graphs: bool = False):
+    def simulate(
+        self,
+        n_days: int = 100,
+        features: List[Feature] = [],
+        update: bool = True,
+        show_progress_graphs: bool = False,
+    ):
 
         """Simulates a given number of days of the simulation while appending all the
         results to the dedicated simulation attributes.
 
         Arguments:
             n_days: number of days to run the simulation for
+
+            features: list of features that will be used to filter the users in order to have
+            a specialized training dataset; if empty, no filtering will be done
+
+            update: flag to decide whether to update or not the current learner
 
             show_progress_graphs: if set to True, will visualize the learner progress graphs
             (if implemented) at each iteration
@@ -168,6 +179,11 @@ class Simulation:
                 self.rng, population, budgets, self.env
             )
             self.dataset.append(interactions)
+            # TODO ugly!!!
+            # Filter interactions based on features
+            if features:
+                interactions = feature_filter([interactions], features)[0]
+                self.filtered_dataset.append(interactions)
             logger.debug(f"Interactions: {interactions}")
 
             # Compute rewards from interactions
@@ -178,7 +194,8 @@ class Simulation:
             logger.debug(f"Rewards: {rewards}")
 
             # Update learner with new observed reward
-            self.learner.learn(interactions, rewards, budgets)
+            if update:
+                self.learner.learn(interactions, rewards, budgets)
 
             if show_progress_graphs:
                 fig = plt.figure()
@@ -186,118 +203,6 @@ class Simulation:
                 plt.show(block=True)
 
         self.tot_days += n_days
-
-    def simulate_from_dataset(
-        self,
-        dataset: List[Interaction],
-        update: bool = False,
-        show_progress_graphs: bool = False,
-    ):
-
-        """Simulates data present in a given dataset.
-
-        Arguments:
-            dataset: dataset contaninig the interactions to simulate
-
-            update: flag to decide whether to update or not the current learner
-
-            show_progress_graphs: if set to True, will visualize the learner progress graphs
-            (if implemented) at each iteration
-
-        Returns:
-            the set of rewards produced by the simulation.
-        """
-
-        cumulated_rewards = np.array([])
-
-        for day in tqdm_notebook(dataset, desc="day"):
-            if day:
-                # Ask the learner to estimate the budgets to assign
-                budgets = self.learner.predict(self.masked_env)
-
-                logger.debug(f"Interactions: {day}")
-
-                # Compute rewards from interactions
-                rewards = _get_aggregated_reward_from_interactions(
-                    self.env.product_prices, day
-                )
-                cumulated_rewards = np.append(cumulated_rewards, rewards)
-                logger.debug(f"Rewards: {rewards}")
-
-                # Update learner with new observed reward
-                if update:
-                    self.dataset.append(day)
-                    self.rewards = np.append(self.rewards, rewards)
-
-                self.learner.learn(day, rewards, budgets)
-
-                if show_progress_graphs:
-                    fig = plt.figure()
-                    self.learner.show_progress(fig)
-                    plt.show(block=True)
-
-        return cumulated_rewards
-
-    # TODO: overall ugly
-    def simulate_from_dataset_exp(
-        self,
-        dataset: List[Interaction],
-        update: bool = False,
-        features: List[Feature] = [],
-        show_progress_graphs: bool = False,
-    ):
-
-        """Simulates data present in a given dataset using experimental mode.
-
-        Arguments:
-            dataset: dataset contaninig the interactions to simulate
-
-            update: flag to decide whether to update or not the current learner
-
-            show_progress_graphs: if set to True, will visualize the learner progress graphs
-            (if implemented) at each iteration
-
-        Returns:
-            the set of rewards produced by the simulation.
-        """
-
-        cumulated_rewards = np.array([])
-
-        for day in tqdm_notebook(dataset, desc="day"):
-            if day:
-                # Ask the learner to estimate the budgets to assign
-                budgets = self.learner.predict(self.masked_env)
-
-                # Generate new interactions based on the dataset population
-                # TODO: hardcoded! FIX! NOW! FOR THE LOVE OF GOD!
-                population = 100
-                interactions = get_day_of_interactions(
-                    self.rng, population, budgets, self.env
-                )
-
-                # TODO ugly!!!
-                if features:
-                    interactions = feature_filter([interactions], features)[0]
-
-                # Compute rewards from interactions
-                rewards = _get_aggregated_reward_from_interactions(
-                    self.env.product_prices, interactions
-                )
-                cumulated_rewards = np.append(cumulated_rewards, rewards)
-                logger.debug(f"Rewards: {rewards}")
-
-                # Update learner with new observed reward
-                if update:
-                    self.dataset.append(interactions)
-                    self.rewards = np.append(self.rewards, rewards)
-                    self.learner.learn(interactions, rewards, budgets)
-
-                if show_progress_graphs:
-                    fig = plt.figure()
-                    self.learner.show_progress(fig)
-                    plt.show(block=True)
-
-        return cumulated_rewards
 
     def reset(self, reset_learner: bool = False):
 
@@ -310,6 +215,7 @@ class Simulation:
 
         self.tot_days = 0
         self.dataset = []
+        self.filtered_dataset = []
         self.rewards = np.array([])
         if reset_learner:
             self.learner = self._learner_init()
@@ -366,7 +272,7 @@ def _get_aggregated_reward_from_interactions(
         else np.array([])
     )
 
-    # The profit of all the products are summed
+    # The profits of all the products are summed
     return np.sum(reward_per_product)
 
 
