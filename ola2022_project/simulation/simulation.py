@@ -179,7 +179,7 @@ class Simulation:
                 self.rng, population, budgets, self.env
             )
             self.dataset.append(interactions)
-            # TODO ugly!!!
+
             # Filter interactions based on features
             if features:
                 interactions = feature_filter([interactions], features)[0]

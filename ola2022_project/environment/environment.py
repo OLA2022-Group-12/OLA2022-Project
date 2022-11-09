@@ -664,7 +664,6 @@ def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteractio
     return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]
 
 
-# TODO: polish
 def feature_filter(dataset, features: List[Feature]):
 
     """Filters the elements of a dataset given a set of wanted features.
