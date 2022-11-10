@@ -140,6 +140,7 @@ class GPUCB1Learner(GPTSLearner):
         interval and modeling it as a confidence bound.
         """
 
+        # Workaround to fix optimization edge case with null weights
         if self.t <= 1:
             return [self.rng.integers(1, 10) for _ in range(self.n_arms)]
 
