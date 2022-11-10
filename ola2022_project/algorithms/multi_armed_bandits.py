@@ -106,13 +106,47 @@ class GPTSLearner(BaseMAB):
 
 
 class GPUCB1Learner(GPTSLearner):
+    def __init__(
+        self,
+        rng,
+        n_arms,
+        arms,
+        std=10,
+        kernel_range=(1e-2, 1e4),
+        kernel_scale=1,
+        theta=1.0,
+        l_param=0.1,
+        normalize_factor=100,
+        disable_warnings=True,
+        confidence=3,
+    ):
+        self.confidence = confidence
+        super().__init__(
+            rng=rng,
+            n_arms=n_arms,
+            arms=arms,
+            std=std,
+            kernel_range=kernel_range,
+            kernel_scale=kernel_scale,
+            theta=theta,
+            l_param=l_param,
+            normalize_factor=normalize_factor,
+            disable_warnings=disable_warnings,
+        )
+
     def estimation(self):
 
         """Computes UCB1 estimations, taking advantage of the GP's confidence
         interval and modeling it as a confidence bound.
         """
 
-        upper_bounds = (self.means + 1.96 * self.sigmas) * self.normalize_factor
+        # Workaround to fix optimization edge case with null weights
+        if self.t <= 1:
+            return [self.rng.integers(1, 10) for _ in range(self.n_arms)]
+
+        upper_bounds = (
+            self.means + self.confidence * 1.96 * self.sigmas
+        ) * self.normalize_factor
         return upper_bounds
 
 
