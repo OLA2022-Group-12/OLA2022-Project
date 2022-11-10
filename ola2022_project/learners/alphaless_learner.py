@@ -108,6 +108,16 @@ class AlphalessLearner(AlphaUnitslessLearner):
     ) -> None:
         super().__init__(rng, n_budget_steps, data, mab_algorithm)
 
+    def predict_raw(self, data: MaskedEnvironmentData):
+
+        """TODO"""
+
+        aggregated_budget_value_matrix = [
+            self.product_mabs[i].estimation() for i in range(len(self.product_mabs))
+        ]
+
+        return np.array(aggregated_budget_value_matrix)
+
     def learn(
         self, interactions: List[AggregatedInteraction], _, prediction: np.ndarray
     ):

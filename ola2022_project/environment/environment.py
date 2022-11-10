@@ -51,6 +51,7 @@ class Step(Enum):
     ONE = ("classes_parameters",)
     TWO = ("classes_parameters",)
     THREE = ("graph",)
+    FIVE = ("classes_parameters",)
 
 
 @dataclass

@@ -1,4 +1,7 @@
 import logging
+import copy
+import numpy as np
+import matplotlib.pyplot as plt
 from ola2022_project.learners import (
     ClairvoyantLearner,
     StupidLearner,
@@ -17,10 +20,7 @@ from ola2022_project.environment.environment import (
     Feature,
 )
 from typing import List
-import numpy as np
 from numpy.random import Generator
-import matplotlib.pyplot as plt
-import copy
 
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ class Simulation:
         n_budget_steps: int = 20,
         population_mean: int = 100,
         population_variance: int = 10,
+        include_learner: bool = True,
         **learner_params,
     ):
 
@@ -63,6 +64,8 @@ class Simulation:
 
             population_variance: variance of the daily number of potential customers
 
+            include_learner: if false, don't create a learner with the simulation
+
             learner_params: various parameters used to created the selected learner
         """
 
@@ -76,7 +79,7 @@ class Simulation:
         self.population_variance = population_variance
         self.learner_params = learner_params
 
-        self.reset(True)
+        self.reset(include_learner)
 
     @property
     def step(self):
@@ -130,6 +133,19 @@ class Simulation:
         elif self.step == Step.THREE:
             # Creation of graphless learner
             return GraphlessLearner(self.rng, self.n_budget_masked_env)
+        elif self.step == Step.FIVE:
+            # Creation of contextual learner
+            # TODO ugly! in order to workaround circular imports
+            from ola2022_project.learners.contextual_learner import ContextualLearner
+
+            return ContextualLearner(
+                self.rng,
+                self.n_budget_steps,
+                self.masked_env,
+                simulation=self,
+                features=self.learner_params["features"],
+                mab_algorithm=self.learner_params["mab_algorithm"],
+            )
         else:
             raise NotImplementedError(f"cannot handle step {self.step} yet")
 
@@ -220,9 +236,14 @@ class Simulation:
         if reset_learner:
             self.learner = self._learner_init()
 
-    def copy(self):
+    def copy(self, include_learner: bool = True):
 
         """Generates a new Simulation copying the parameters of the current simulation
+
+        Arguments:
+            include_learner: if false, don't include a learner in the simulation (note that if
+            this flag is true the learner of the target simulation won't be copied over but a new
+            one will be created)
 
         Returns:
             a new copied Simulation object
@@ -235,6 +256,7 @@ class Simulation:
             self.n_budget_steps,
             self.population_mean,
             self.population_variance,
+            include_learner,
             **self.learner_params,
         )
 

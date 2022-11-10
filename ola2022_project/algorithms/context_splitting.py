@@ -319,7 +319,7 @@ def partial_tree_generation(
             root,
         )
     )
-    return ret_contexts
+    return flatten_list(ret_contexts)
 
 
 def _generate_tree_node(
