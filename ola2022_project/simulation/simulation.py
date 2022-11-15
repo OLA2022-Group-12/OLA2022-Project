@@ -135,7 +135,7 @@ class Simulation:
             return GraphlessLearner(self.rng, self.n_budget_masked_env)
         elif self.step == Step.FIVE:
             # Creation of contextual learner
-            # TODO ugly! in order to workaround circular imports
+            # Workaround for circular imports
             from ola2022_project.learners.contextual_learner import ContextualLearner
 
             return ContextualLearner(

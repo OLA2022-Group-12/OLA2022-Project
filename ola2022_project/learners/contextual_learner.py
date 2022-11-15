@@ -19,9 +19,9 @@ from ola2022_project.optimization import budget_assignment
 
 class ContextualLearner(Learner):
 
-    """This class implements an instance of the learner with unknown alpha functions
-    and number of units sold per product. The learner will receive aggregated data
-    so it must work by estimating aggregated alpha functions.
+    """This class implements an instance of a learner that takes into account context
+    generation utilizing multiple contexts, each containing an AlphalessLearner optimized
+    for assigning budgets for clients that match the features of its related context.
     """
 
     def __init__(
@@ -34,7 +34,7 @@ class ContextualLearner(Learner):
         mab_algorithm=Mab.GPTS,
     ) -> None:
 
-        """Creates a learner which works on unknown alpha functions.
+        """Creates a learner which works with multiple contexts
 
         Arguments:
             rng: numpy generator (such as default_rng)
@@ -43,9 +43,9 @@ class ContextualLearner(Learner):
 
             data: instance of a MaskedEnvironmentData initialized with Step.ONE
 
-            simulation: TODO
+            simulation: reference simulation to copy its parameters
 
-            features: TODO
+            features: features that are eligible for creating specialized contexts
 
             mab_algorithm: specifices whether the learner should be implemented
                 with a Gaussian Process Thompson Sampling or Gaussian Process
@@ -95,10 +95,15 @@ class ContextualLearner(Learner):
 
     def context_generation(self, dataset):
 
-        """TODO"""
+        """Runs a context generation algorithm to decide if it's worth generating
+        new contexts to target; if it is in fact convenient, it proceeds to update
+        the current contexts and learners
+
+        Arguments:
+            dataset: current dataset of interactions that were gathered until now
+        """
 
         self.contexts = partial_tree_generation(
-            self.simulation,
             dataset,
             self.features,
             self.contexts,

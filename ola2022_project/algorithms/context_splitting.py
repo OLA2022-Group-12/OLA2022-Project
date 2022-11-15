@@ -269,8 +269,6 @@ def tree_generation(
     """
 
     # Obtain the base context at the root of the tree
-    # TODO: hidden information are passed to the learners, which isn't really a big deal
-    #       in this case, however we might want to hide them (NOT PRIORITARY)
     base_context = _feature_split(sim_reference.copy(), dataset)
     # Start generating tree recursively
     optimal_contexts = _generate_tree_node(
@@ -280,7 +278,6 @@ def tree_generation(
 
 
 def partial_tree_generation(
-    sim_reference: Simulation,
     dataset,
     features: List[Feature],
     root: List[Context],
@@ -290,9 +287,6 @@ def partial_tree_generation(
     of contexts.
 
     Arguments:
-        sim_reference: simulation reference from which the parameters will be copied and used
-            to construct new simulations that operate on the dataset
-
         dataset: current offline dataset gathered over a span of time, containing samples
             used to train new models and define context attributes
 
