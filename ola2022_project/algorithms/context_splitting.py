@@ -199,7 +199,7 @@ def _feature_half_split(
     return new_context
 
 
-def train_context(context: Context, dataset):
+def train_context(context: Context, dataset, update: bool = True):
 
     """Trains and evaluates a context by simulating interactions utilizing a dataset as a reference;
     the context may be new or already trained, in the latter case only the difference in days
@@ -210,12 +210,14 @@ def train_context(context: Context, dataset):
 
         dataset: current offline dataset gathered over a span of time containing samples
             used to train new models and define context attributes
+
+        update: if False, the learner won't gain any additional knowledge from the dataset
     """
 
     new_days = len(dataset) - len(context.learner_sim.dataset)
 
     # Training simulation
-    context.learner_sim.simulate(new_days, context.features)
+    context.learner_sim.simulate(new_days, context.features, update=update)
 
     # Count total number of samples for datasets and expected probability of a sample
     # presenting the features of interest
@@ -300,7 +302,7 @@ def partial_tree_generation(
     """
 
     # Update experimental rewards of old base contexts
-    map(lambda context: train_context(context, dataset), root)
+    map(lambda context: train_context(context, dataset, update=False), root)
 
     ret_contexts = list(
         map(

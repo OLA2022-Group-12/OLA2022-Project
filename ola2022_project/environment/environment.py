@@ -385,6 +385,10 @@ def get_day_of_interactions(
         f"Population divided between classes as follows: {customers_per_class}"
     )
 
+    # Check for eventual features inside the budgets
+    if len(budgets) == 2:
+        budgets, features = budgets
+
     # If the budgets array is 1-dimensional it means that we are optimizing for a
     # single context (no splitting has happened)
     if len(np.shape(budgets)) == 1:
@@ -396,7 +400,7 @@ def get_day_of_interactions(
     # If the array is 2-dimensional it means that we are optimizing for more than
     # one context
     # TODO implement this
-    elif len(np.shape(budgets)) == 2:
+    elif len(np.shape(budgets)) >= 2:
         raise RuntimeError(
             "Cannot handle multiple contexts, still has to be implemented"
         )

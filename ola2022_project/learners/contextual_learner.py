@@ -12,6 +12,7 @@ from ola2022_project.environment.environment import (
     MaskedEnvironmentData,
     Feature,
     Step,
+    feature_filter,
 )
 from ola2022_project.algorithms.multi_armed_bandits import Mab
 from ola2022_project.optimization import budget_assignment
@@ -66,10 +67,10 @@ class ContextualLearner(Learner):
         self.mab_algorithm = mab_algorithm
 
         self.features = features
-        self.simulation = simulation.copy(include_learner=False)
-        self.simulation.step = Step.ONE
-        self.learners = [self.simulation.learner]
-        self.contexts = [Context(self.simulation, [], 0, 0, 0, 0)]
+        simulation = simulation.copy(include_learner=False)
+        simulation.step = Step.ONE
+        self.learners = [simulation.learner]
+        self.contexts = [Context(simulation, [], 0, 0, 0, 0)]
 
     def predict(self, _) -> np.ndarray:
         aggregated_budget_value_matrix = [
@@ -79,18 +80,28 @@ class ContextualLearner(Learner):
         best_allocation_index = budget_assignment(aggregated_budget_value_matrix)
         best_allocation = self.budget_steps[best_allocation_index]
 
-        return best_allocation
+        budgets = []
+        features = []
+        for i, learner in enumerate(self.learners):
+            lower = i * self.n_products
+            upper = (i + 1) * self.n_products
+            budgets.append(best_allocation[lower:upper])
+            features.append(self.contexts[i].features)
+        budgets = np.squeeze(budgets)
+
+        return budgets, features
 
     def learn(
         self, interactions: List[AggregatedInteraction], _, prediction: np.ndarray
     ):
         for i, learner in enumerate(self.learners):
-            lower = i * self.n_products
-            upper = (i + 1) * self.n_products
+            relevant_interactions = feature_filter(
+                [interactions], self.contexts[i].features
+            )[0]
             learner.learn(
-                interactions,
+                relevant_interactions,
                 _,
-                prediction[lower:upper],
+                prediction[i],
             )
 
     def context_generation(self, dataset):
