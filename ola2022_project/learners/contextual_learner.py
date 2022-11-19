@@ -70,7 +70,7 @@ class ContextualLearner(Learner):
         simulation = simulation.copy(include_learner=False)
         simulation.step = Step.ONE
         self.learners = [simulation.learner]
-        self.contexts = [Context(simulation, [], 0, 0, 0, 0)]
+        self.contexts = [Context(simulation, [], 0, 1, 0, 0)]
 
     def predict(self, _) -> np.ndarray:
         aggregated_budget_value_matrix = [

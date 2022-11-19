@@ -140,8 +140,8 @@ def _feature_split(
         # and no split is needed
         sim_model.simulate(len(dataset))
         n = sum([len(d) for d in sim_model.dataset])
-        # TODO: max expected reward (temporary solution: mean reward over dataset)
-        max_exp_reward = np.mean(sim_model.rewards)
+        # TODO: max expected reward (temporary solution: max reward over dataset)
+        max_exp_reward = np.max(sim_model.rewards)
 
         logger.debug("Root context")
         logger.debug(f"Maximum expected reward {max_exp_reward}")
@@ -193,7 +193,7 @@ def _feature_half_split(
     features.append(feature)
 
     # Create and train a new context
-    new_context = Context(sim_model, features, 0, 0, 0, 0)
+    new_context = Context(sim_model, features, 0, 1, 0, 0)
     train_context(new_context, dataset)
 
     return new_context
@@ -221,8 +221,14 @@ def train_context(context: Context, dataset, update: bool = True):
 
     # Count total number of samples for datasets and expected probability of a sample
     # presenting the features of interest
-    context.nums = sum([len(d) for d in context.learner_sim.filtered_dataset])
-    context.exp_prob = context.nums / sum([len(d) for d in context.learner_sim.dataset])
+    if context.features:
+        context.nums = sum([len(d) for d in context.learner_sim.filtered_dataset])
+        context.exp_prob = context.nums / sum(
+            [len(d) for d in context.learner_sim.dataset]
+        )
+    else:
+        context.nums = sum([len(d) for d in context.learner_sim.dataset])
+        context.exp_prob = 1
 
     # Reward simulation
     reward_sim = context.learner_sim.copy()
@@ -231,18 +237,18 @@ def train_context(context: Context, dataset, update: bool = True):
 
     # Compute maximum expected reward and count samples
     n_reward = sum([len(d) for d in reward_sim.dataset])
-    # TODO: max expected reward (temporary solution: mean reward over dataset)
-    context.max_exp_reward = np.mean(reward_sim.rewards)
+    # TODO: max expected reward (temporary solution: max reward over dataset)
+    context.max_exp_reward = np.max(reward_sim.rewards)
 
     # Compute the weighted bound
     context.weighted_bound = _compute_weighted_bound(
         context.nums, n_reward, context.exp_prob, context.max_exp_reward
     )
 
-    logger.debug(f"Context features {context.features}")
-    logger.debug(f"Expected probability {context.exp_prob}")
-    logger.debug(f"Maximum expected reward {context.max_exp_reward}")
-    logger.debug(f"Weighted lower bound {context.weighted_bound}")
+    print(f"Context features {context.features}")
+    print(f"Expected probability {context.exp_prob}")
+    print(f"Maximum expected reward {context.max_exp_reward}")
+    print(f"Weighted lower bound {context.weighted_bound}")
 
 
 def tree_generation(
@@ -302,7 +308,7 @@ def partial_tree_generation(
     """
 
     # Update experimental rewards of old base contexts
-    map(lambda context: train_context(context, dataset, update=False), root)
+    list(map(lambda context: train_context(context, dataset, update=False), root))
 
     ret_contexts = list(
         map(
