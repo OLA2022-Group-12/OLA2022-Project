@@ -308,7 +308,8 @@ def partial_tree_generation(
     """
 
     # Update experimental rewards of old base contexts
-    list(map(lambda context: train_context(context, dataset, update=False), root))
+    for context in root:
+        train_context(context, dataset, update=False)
 
     ret_contexts = list(
         map(

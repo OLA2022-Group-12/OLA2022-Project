@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, Tuple
 import numpy as np
 from ola2022_project.environment.environment import (
     AggregatedInteraction,
     MaskedEnvironmentData,
+    Feature,
 )
 from ola2022_project.learners import Learner
 from ola2022_project.algorithms.multi_armed_bandits import (
@@ -75,7 +76,9 @@ class AlphaUnitslessLearner(Learner):
                 for _ in range(self.n_products)
             ]
 
-    def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
+    def predict(
+        self, data: MaskedEnvironmentData
+    ) -> Tuple[np.ndarray, List[List[Feature]]]:
         aggregated_budget_value_matrix = [
             self.product_mabs[i].estimation() for i in range(len(self.product_mabs))
         ]

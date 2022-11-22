@@ -1,7 +1,8 @@
 from ola2022_project.learners.learner import Learner
-from ola2022_project.environment.environment import MaskedEnvironmentData
+from ola2022_project.environment.environment import MaskedEnvironmentData, Feature
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import List, Tuple
 
 
 class StupidLearner(Learner):
@@ -15,7 +16,9 @@ class StupidLearner(Learner):
     def learn(self, interactions, reward, prediction):
         pass
 
-    def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
+    def predict(
+        self, data: MaskedEnvironmentData
+    ) -> Tuple[np.ndarray, List[List[Feature]]]:
         return np.full(
             (len(data.product_prices),), data.total_budget / len(data.product_prices)
         )

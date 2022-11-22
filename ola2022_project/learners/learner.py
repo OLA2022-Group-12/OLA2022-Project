@@ -1,10 +1,14 @@
-from typing import List
+from typing import List, Tuple
 from abc import ABC, abstractmethod
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from ola2022_project.environment.environment import MaskedEnvironmentData, Interaction
+from ola2022_project.environment.environment import (
+    MaskedEnvironmentData,
+    Interaction,
+    Feature,
+)
 
 
 class Learner(ABC):
@@ -35,7 +39,9 @@ class Learner(ABC):
         pass
 
     @abstractmethod
-    def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
+    def predict(
+        self, data: MaskedEnvironmentData
+    ) -> Tuple[np.ndarray, List[List[Feature]]]:
 
         """Makes an inference about the values of the budgets for the subcampaigns
         utilizing the information gathered over time and the current state of the
@@ -46,8 +52,10 @@ class Learner(ABC):
                 used by the learner in order to make the inference
 
         Returns:
-            a list of values, corresponding to the budgets inferred given the knowledge
-            obtained by the learner until now
+            a tuple containing a list of values (corresponding to the budgets inferred given
+            the knowledge obtained by the learner until now) and a list of features (referring
+            to which particular customers were the budgets aimed for, if None, the budgets
+            apply to all the customers)
         """
 
         pass

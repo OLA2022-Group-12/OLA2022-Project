@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import List
+from typing import List, Tuple
 from ola2022_project.learners import Learner
 from ola2022_project.algorithms.context_splitting import (
     Context,
@@ -72,7 +72,7 @@ class ContextualLearner(Learner):
         self.learners = [simulation.learner]
         self.contexts = [Context(simulation, [], 0, 1, 0, 0)]
 
-    def predict(self, _) -> np.ndarray:
+    def predict(self, _) -> Tuple[np.ndarray, List[List[Feature]]]:
         aggregated_budget_value_matrix = [
             np.array(learner.predict_raw(self.env)) for learner in self.learners
         ]
@@ -88,6 +88,7 @@ class ContextualLearner(Learner):
             budgets.append(best_allocation[lower:upper])
             features.append(self.contexts[i].features)
         budgets = np.squeeze(budgets)
+        features = np.squeeze(features)
 
         return budgets, features
 
