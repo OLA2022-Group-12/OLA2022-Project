@@ -666,6 +666,39 @@ def remove_classes(interactions: List[Interaction]) -> List[AggregatedInteractio
     return [AggregatedInteraction(e.items_bought, e.landed_on) for e in interactions]
 
 
+def simple_abrupt_change(env: EnvironmentData, product: int, factor: float):
+
+    """Applies an abrupt change on the specified product.
+    For every class, the upper_bound parameter of the specified product is multiplied
+    by the argument factor. Useful for reducing the appeal of a product for all the
+    classes by using a 0 < factor < 1
+
+    Arguments:
+        env: instance of EnvironmentData
+
+        product: integer between 0 and 4 representing the product to adjust
+
+        factor: a float between 0 and 1 that will be multiplied with the upper bounds
+            of the specified product
+    """
+
+    # This simple function only works with values of the factor parameter in the range [0,1]
+    # because a negative value cannot be used in this context, and a >1 value could lead to
+    # a sum of alpha ratios greater than 1
+    if factor < 0 or factor > 1:
+        raise ValueError(
+            "Cannot apply abrupt change with values outside the [0,1] interval."
+        )
+
+    for class_params in env.classes_parameters:
+        params = class_params[product]
+        class_params[product] = UserClassParameters(
+            params.reservation_price,
+            params.upper_bound * factor,
+            params.max_useful_budget,
+        )
+
+
 def feature_filter(dataset, features: List[Feature]):
 
     """Filters the elements of a dataset given a set of wanted features.
