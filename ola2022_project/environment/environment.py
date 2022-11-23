@@ -385,28 +385,25 @@ def get_day_of_interactions(
         f"Population divided between classes as follows: {customers_per_class}"
     )
 
-    # Check for eventual features inside the budgets
-    if len(budgets) == 2:
-        budgets, features = budgets
+    # Splits actual budgets and features
+    budgets, features = budgets
 
-    # If the budgets array is 1-dimensional it means that we are optimizing for a
+    # If there are no features it means that we are optimizing for a
     # single context (no splitting has happened)
-    if len(np.shape(budgets)) == 1:
+    if features is None or len(features) == 0:
+        budgets = np.squeeze(budgets)
         budget_allocation = np.array(
             [np.array(budgets) / n_classes for _ in range(n_classes)]
         )
         logger.debug("Targeting 1 context in current environment")
 
-    # If the array is 2-dimensional it means that we are optimizing for more than
+    # If we have some features it means that we are optimizing for more than
     # one context
     # TODO implement this
-    elif len(np.shape(budgets)) >= 2:
+    else:
         raise RuntimeError(
             "Cannot handle multiple contexts, still has to be implemented"
         )
-
-    else:
-        raise RuntimeError(f"Invalid budget shape: {np.shape(budgets)}")
 
     # total_interactions = list()
     interaction_blueprints = []

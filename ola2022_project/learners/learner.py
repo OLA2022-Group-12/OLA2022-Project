@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -41,7 +41,7 @@ class Learner(ABC):
     @abstractmethod
     def predict(
         self, data: MaskedEnvironmentData
-    ) -> Tuple[np.ndarray, List[List[Feature]]]:
+    ) -> Tuple[np.ndarray, Optional[List[List[Feature]]]]:
 
         """Makes an inference about the values of the budgets for the subcampaigns
         utilizing the information gathered over time and the current state of the

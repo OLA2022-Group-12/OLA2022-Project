@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -74,7 +74,7 @@ class GraphlessLearner(Learner):
 
     def predict(
         self, data: MaskedEnvironmentData
-    ) -> Tuple[np.ndarray, List[List[Feature]]]:
+    ) -> Tuple[np.ndarray, Optional[List[List[Feature]]]]:
         budget_steps = np.linspace(0, data.total_budget, self.n_budget_steps)
 
         # Sample current estimation of graph
@@ -130,7 +130,7 @@ class GraphlessLearner(Learner):
         best_allocation_index = budget_assignment(aggregated_budget_value_matrix)
         best_allocation = self.budget_steps[best_allocation_index]
 
-        return best_allocation
+        return best_allocation, None
 
     def learn(
         self, interactions: List[Interaction], reward: float, prediction: np.ndarray

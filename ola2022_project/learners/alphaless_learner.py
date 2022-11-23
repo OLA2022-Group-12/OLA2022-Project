@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import numpy as np
 from ola2022_project.environment.environment import (
     AggregatedInteraction,
@@ -78,7 +78,7 @@ class AlphaUnitslessLearner(Learner):
 
     def predict(
         self, data: MaskedEnvironmentData
-    ) -> Tuple[np.ndarray, List[List[Feature]]]:
+    ) -> Tuple[np.ndarray, Optional[List[List[Feature]]]]:
         aggregated_budget_value_matrix = [
             self.product_mabs[i].estimation() for i in range(len(self.product_mabs))
         ]
@@ -88,7 +88,7 @@ class AlphaUnitslessLearner(Learner):
         best_allocation_index = budget_assignment(aggregated_budget_value_matrix)
         best_allocation = self.budget_steps[best_allocation_index]
 
-        return best_allocation
+        return best_allocation, None
 
     def learn(self, _, reward: float, prediction: np.ndarray):
         for i, p in enumerate(prediction):

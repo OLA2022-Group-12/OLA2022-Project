@@ -211,7 +211,7 @@ class Simulation:
 
             # Update learner with new observed reward
             if update:
-                self.learner.learn(interactions, rewards, budgets)
+                self.learner.learn(interactions, rewards, budgets[0])
 
             if show_progress_graphs:
                 fig = plt.figure()
