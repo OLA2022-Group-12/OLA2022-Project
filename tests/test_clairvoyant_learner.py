@@ -31,4 +31,4 @@ def test_sum_of_predictions_less_than_total_budget(env):
 
     predictions = learner.predict(masked_env)
 
-    assert predictions.sum() <= masked_env.total_budget
+    assert predictions[0].sum() <= masked_env.total_budget
