@@ -684,7 +684,7 @@ def simple_abrupt_change(env: EnvironmentData, product: int, factor: float):
     # because a negative value cannot be used in this context, and a >1 value could lead to
     # a sum of alpha ratios greater than 1
     if factor < 0 or factor > 1:
-        raise RuntimeError(
+        raise ValueError(
             "Cannot apply abrupt change with values outside the [0,1] interval."
         )
 
