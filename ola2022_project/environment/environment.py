@@ -51,6 +51,7 @@ class Step(Enum):
     ONE = ("classes_parameters",)
     TWO = ("classes_parameters",)
     THREE = ("graph",)
+    FIVE = ("classes_parameters",)
 
 
 @dataclass
@@ -384,24 +385,25 @@ def get_day_of_interactions(
         f"Population divided between classes as follows: {customers_per_class}"
     )
 
-    # If the budgets array is 1-dimensional it means that we are optimizing for a
+    # Splits actual budgets and features
+    budgets, features = budgets
+
+    # If there are no features it means that we are optimizing for a
     # single context (no splitting has happened)
-    if len(np.shape(budgets)) == 1:
+    if features is None or len(features) == 0:
+        budgets = np.squeeze(budgets)
         budget_allocation = np.array(
             [np.array(budgets) / n_classes for _ in range(n_classes)]
         )
         logger.debug("Targeting 1 context in current environment")
 
-    # If the array is 2-dimensional it means that we are optimizing for more than
+    # If we have some features it means that we are optimizing for more than
     # one context
     # TODO implement this
-    elif len(np.shape(budgets)) == 2:
+    else:
         raise RuntimeError(
             "Cannot handle multiple contexts, still has to be implemented"
         )
-
-    else:
-        raise RuntimeError(f"Invalid budget shape: {np.shape(budgets)}")
 
     # total_interactions = list()
     interaction_blueprints = []
@@ -695,3 +697,34 @@ def simple_abrupt_change(env: EnvironmentData, product: int, factor: float):
             params.upper_bound * factor,
             params.max_useful_budget,
         )
+
+
+def feature_filter(dataset, features: List[Feature]):
+
+    """Filters the elements of a dataset given a set of wanted features.
+
+    Arguments:
+        dataset: dataset to filter
+
+        features: features to discriminate
+
+    Returns:
+        A new dataset composed only of interactions that satisfy the given features
+    """
+
+    filtered_dataset = []
+    for dataset_day in dataset:
+        # Select only the interactions made by users that respect the features specified
+        # in the features parameter, this is done by iterating over every day in the dataset
+        # and every interaction in each day
+        filtered_dataset.append(
+            list(
+                filter(
+                    lambda interaction: all(
+                        (feature in interaction.user_features) for feature in features
+                    ),
+                    dataset_day,
+                )
+            )
+        )
+    return filtered_dataset

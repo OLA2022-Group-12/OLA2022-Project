@@ -1,4 +1,7 @@
 import logging
+import copy
+import numpy as np
+import matplotlib.pyplot as plt
 from ola2022_project.learners import (
     ClairvoyantLearner,
     StupidLearner,
@@ -10,14 +13,14 @@ from tqdm.notebook import trange
 from ola2022_project.environment.environment import (
     get_day_of_interactions,
     create_masked_environment,
+    feature_filter,
     Step,
     Interaction,
     EnvironmentData,
+    Feature,
 )
 from typing import List
-import numpy as np
 from numpy.random import Generator
-import matplotlib.pyplot as plt
 
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,7 @@ class Simulation:
         n_budget_steps: int = 20,
         population_mean: int = 100,
         population_variance: int = 10,
+        include_learner: bool = True,
         **learner_params,
     ):
 
@@ -60,6 +64,8 @@ class Simulation:
 
             population_variance: variance of the daily number of potential customers
 
+            include_learner: if false, don't create a learner with the simulation
+
             learner_params: various parameters used to created the selected learner
         """
 
@@ -71,8 +77,9 @@ class Simulation:
         self.n_budget_steps = n_budget_steps
         self.population_mean = population_mean
         self.population_variance = population_variance
+        self.learner_params = learner_params
 
-        self.reset(True, **learner_params)
+        self.reset(include_learner)
 
     @property
     def step(self):
@@ -92,13 +99,10 @@ class Simulation:
         self._env = value
         self.masked_env = create_masked_environment(self.step, self.env)
 
-    def _learner_init(self, **params):
+    def _learner_init(self):
 
         """Creates a new learner utilizing the current simulation step and the
         given learner creation parameters.
-
-        Arguments:
-            params: learner creation parameters
 
         Returns:
             A new untrained learner depending on the current simulation step
@@ -116,7 +120,7 @@ class Simulation:
                 self.rng,
                 self.n_budget_steps,
                 self.masked_env,
-                mab_algorithm=params["mab_algorithm"],
+                mab_algorithm=self.learner_params["mab_algorithm"],
             )
         elif self.step == Step.TWO:
             # Creation of alphaunitsless learner
@@ -124,21 +128,45 @@ class Simulation:
                 self.rng,
                 self.n_budget_steps,
                 self.masked_env,
-                mab_algorithm=params["mab_algorithm"],
+                mab_algorithm=self.learner_params["mab_algorithm"],
             )
         elif self.step == Step.THREE:
             # Creation of graphless learner
             return GraphlessLearner(self.rng, self.n_budget_masked_env)
+        elif self.step == Step.FIVE:
+            # Creation of contextual learner
+            # Workaround for circular imports
+            from ola2022_project.learners.contextual_learner import ContextualLearner
+
+            return ContextualLearner(
+                self.rng,
+                self.n_budget_steps,
+                self.masked_env,
+                simulation=self,
+                features=self.learner_params["features"],
+                mab_algorithm=self.learner_params["mab_algorithm"],
+            )
         else:
             raise NotImplementedError(f"cannot handle step {self.step} yet")
 
-    def simulate(self, n_days: int = 100, show_progress_graphs: bool = False):
+    def simulate(
+        self,
+        n_days: int = 100,
+        features: List[Feature] = [],
+        update: bool = True,
+        show_progress_graphs: bool = False,
+    ):
 
         """Simulates a given number of days of the simulation while appending all the
         results to the dedicated simulation attributes.
 
         Arguments:
             n_days: number of days to run the simulation for
+
+            features: list of features that will be used to filter the users in order to have
+            a specialized training dataset; if empty, no filtering will be done
+
+            update: flag to decide whether to update or not the current learner
 
             show_progress_graphs: if set to True, will visualize the learner progress graphs
             (if implemented) at each iteration
@@ -166,7 +194,12 @@ class Simulation:
             interactions = get_day_of_interactions(
                 self.rng, population, budgets, self.env
             )
-            self.dataset = np.append(self.dataset, interactions)
+            self.dataset.append(interactions)
+
+            # Filter interactions based on features
+            if features:
+                interactions = feature_filter([interactions], features)[0]
+                self.filtered_dataset.append(interactions)
             logger.debug(f"Interactions: {interactions}")
 
             # Compute rewards from interactions
@@ -177,7 +210,8 @@ class Simulation:
             logger.debug(f"Rewards: {rewards}")
 
             # Update learner with new observed reward
-            self.learner.learn(interactions, rewards, budgets)
+            if update:
+                self.learner.learn(interactions, rewards, budgets[0])
 
             if show_progress_graphs:
                 fig = plt.figure()
@@ -186,23 +220,45 @@ class Simulation:
 
         self.tot_days += n_days
 
-    def reset(self, reset_learner: bool = False, **learner_params):
+    def reset(self, reset_learner: bool = False):
 
         """Resets the dynamic parameters of the simulation to their initial values.
 
         Arguments:
             reset_learner: if set to True, will also reset the learner by creating a new one
             utilizing the current simulation step as a reference
-
-            learner_params: if the reset_learner flag is set to True, the learner_params will
-            be passed to the new learner that will be created
         """
 
         self.tot_days = 0
-        self.dataset = np.array([])
+        self.dataset = []
+        self.filtered_dataset = []
         self.rewards = np.array([])
         if reset_learner:
-            self.learner = self._learner_init(**learner_params)
+            self.learner = self._learner_init()
+
+    def copy(self, include_learner: bool = True):
+
+        """Generates a new Simulation copying the parameters of the current simulation
+
+        Arguments:
+            include_learner: if false, don't include a learner in the simulation (note that if
+            this flag is true the learner of the target simulation won't be copied over but a new
+            one will be created)
+
+        Returns:
+            a new copied Simulation object
+        """
+
+        return Simulation(
+            self.rng,
+            copy.copy(self.env),
+            self.step,
+            self.n_budget_steps,
+            self.population_mean,
+            self.population_variance,
+            include_learner,
+            **self.learner_params,
+        )
 
 
 def _get_aggregated_reward_from_interactions(
@@ -238,7 +294,7 @@ def _get_aggregated_reward_from_interactions(
         else np.array([])
     )
 
-    # The profit of all the products are summed
+    # The profits of all the products are summed
     return np.sum(reward_per_product)
 
 

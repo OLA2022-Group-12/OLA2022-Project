@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Tuple, Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,6 +9,7 @@ from ola2022_project.environment.environment import (
     MaskedEnvironmentData,
     Interaction,
     alpha_function,
+    Feature,
 )
 from ola2022_project.learners import Learner
 from ola2022_project.optimization import budget_assignment, get_expected_value_per_node
@@ -71,7 +72,9 @@ class GraphlessLearner(Learner):
 
         return graph
 
-    def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
+    def predict(
+        self, data: MaskedEnvironmentData
+    ) -> Tuple[np.ndarray, Optional[List[List[Feature]]]]:
         budget_steps = np.linspace(0, data.total_budget, self.n_budget_steps)
 
         # Sample current estimation of graph
@@ -127,7 +130,7 @@ class GraphlessLearner(Learner):
         best_allocation_index = budget_assignment(aggregated_budget_value_matrix)
         best_allocation = self.budget_steps[best_allocation_index]
 
-        return best_allocation
+        return best_allocation, None
 
     def learn(
         self, interactions: List[Interaction], reward: float, prediction: np.ndarray
