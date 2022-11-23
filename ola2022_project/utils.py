@@ -7,6 +7,37 @@ from math import isclose
 logger = logging.getLogger(__name__)
 
 
+def flatten_list(input_list):
+    flat_list = []
+    # Iterate through the outer list
+    for element in input_list:
+        if isinstance(element, list):
+            # If the element is of type list, iterate through the sublist
+            for item in element:
+                flat_list.append(item)
+        else:
+            flat_list.append(element)
+    return flat_list
+
+
+def compute_hoeffding_bound(n, confidence=0.05):
+
+    """Computes the Hoeffding bound for an empiric value given the number of samples
+    and the confidence
+
+    Arguments:
+        n: number of samples on which the empiric values was calculated upon
+
+        confidence: also referred to as delta, corresponds to the error tolerance, therefore
+            the bound is taken with a 1 - delta confidence interval
+
+    Returns:
+        Floating value corresponding to the computed value
+    """
+
+    return np.sqrt(-np.log(confidence) / (2 * n))
+
+
 def calculate_aggregated_budget_value(
     product_graph_landing_values: List[float],
     product_prices: List[float],

@@ -1,10 +1,11 @@
 import logging
-
+from typing import List, Tuple, Optional
 from ola2022_project.utils import calculate_aggregated_budget_value
 from ola2022_project.learners import Learner
 from ola2022_project.environment.environment import (
     MaskedEnvironmentData,
     alpha_function,
+    Feature,
 )
 from ola2022_project.optimization import budget_assignment
 import numpy as np
@@ -26,7 +27,9 @@ class ClairvoyantLearner(Learner):
     def learn(self, interactions, reward, prediction):
         pass
 
-    def predict(self, data: MaskedEnvironmentData) -> np.ndarray:
+    def predict(
+        self, data: MaskedEnvironmentData
+    ) -> Tuple[np.ndarray, Optional[List[List[Feature]]]]:
         if (
             data.classes_parameters is None
             or data.class_ratios is None
@@ -85,7 +88,7 @@ class ClairvoyantLearner(Learner):
             f"sum_of_allocations / total_budget = {best_allocation.sum()} / {data.total_budget}"
         )
 
-        return best_allocation
+        return best_allocation, None
 
     def show_progress(self, fig: plt.Figure):
         pass
