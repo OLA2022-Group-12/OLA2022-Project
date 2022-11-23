@@ -674,7 +674,7 @@ def simple_abrupt_change(env: EnvironmentData, product: int, factor: float):
     Arguments:
         env: instance of EnvironmentData
 
-        product: integer between 0 and 4 representig the product to adjust
+        product: integer between 0 and 4 representing the product to adjust
 
         factor: a float between 0 and 1 that will be multiplied with the upper bounds
             of the specified product
