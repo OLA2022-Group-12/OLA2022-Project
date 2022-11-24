@@ -8,6 +8,8 @@ from ola2022_project.learners import (
     AlphalessLearner,
     AlphaUnitslessLearner,
     GraphlessLearner,
+    SlidingWindowLearner,
+    ChangeDetectionLearner,
 )
 from tqdm.notebook import trange
 from ola2022_project.environment.environment import (
@@ -111,9 +113,11 @@ class Simulation:
         if self.step == Step.CLAIRVOYANT:
             # Creation of clairovyant learner
             return ClairvoyantLearner(self.n_budget_steps)
+
         if self.step == Step.ZERO:
             # Creation of stupid learner
             return StupidLearner()
+
         elif self.step == Step.ONE:
             # Creation of alphaless learner
             return AlphalessLearner(
@@ -122,6 +126,7 @@ class Simulation:
                 self.masked_env,
                 mab_algorithm=self.learner_params["mab_algorithm"],
             )
+
         elif self.step == Step.TWO:
             # Creation of alphaunitsless learner
             return AlphaUnitslessLearner(
@@ -130,9 +135,34 @@ class Simulation:
                 self.masked_env,
                 mab_algorithm=self.learner_params["mab_algorithm"],
             )
+
         elif self.step == Step.THREE:
             # Creation of graphless learner
             return GraphlessLearner(self.rng, self.n_budget_masked_env)
+
+        elif self.step == Step.FOUR:
+
+            if self.learner_params["sliding_window"]:
+                return SlidingWindowLearner(
+                    self.rng,
+                    self.n_budget_steps,
+                    self.masked_env,
+                    mab_algorithm=self.learner_params["mab_algorithm"],
+                    window_size=self.learner_params["window_size"],
+                    units_less=self.learner_params["units_less"],
+                )
+
+            else:
+                return ChangeDetectionLearner(
+                    self.rng,
+                    self.n_budget_steps,
+                    self.masked_env,
+                    mab_algorithm=self.learner_params["mab_algorithm"],
+                    threshold=self.learner_params["threshold"],
+                    threshold_window=self.learner_params["threshold_window"],
+                    units_less=self.learner_params["units_less"],
+                )
+
         elif self.step == Step.FIVE:
             # Creation of contextual learner
             # Workaround for circular imports

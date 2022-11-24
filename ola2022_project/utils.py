@@ -154,7 +154,7 @@ def replace_zeros(array, replace_with=1e-16, tollerance=1e-10):
     """
 
     for element in range(len(array)):
-        if isclose(array[element], 0.0, rel_tol=tollerance):
+        if isclose(array[element], 0.0, rel_tol=tollerance) or array[element] < 0:
             array[element] = replace_with
 
     return array

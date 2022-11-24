@@ -23,7 +23,11 @@ class AlphaUnitslessLearner(Learner):
     """
 
     def __init__(
-        self, rng, n_budget_steps, data: MaskedEnvironmentData, mab_algorithm=Mab.GPTS
+        self,
+        rng,
+        n_budget_steps,
+        data: MaskedEnvironmentData,
+        mab_algorithm=Mab.GPTS,
     ) -> None:
 
         """Creates a learner which works on unknown alpha functions.
@@ -59,6 +63,7 @@ class AlphaUnitslessLearner(Learner):
         self.budget_steps = np.linspace(0, data.total_budget, self.n_budget_steps)
         self.total_budget = data.total_budget
         self.env = data
+        self.rng = rng
 
         normalized_budget_steps = self.budget_steps / data.total_budget
 
@@ -94,6 +99,20 @@ class AlphaUnitslessLearner(Learner):
         for i, p in enumerate(prediction):
             prediction_index = np.where(self.budget_steps == p)[0][0]
             self.product_mabs[i].update(prediction_index, reward)
+
+    def slide_window(self):
+        for mab in self.product_mabs:
+            mab.delete_first_observation()
+
+    def reset(self):
+        algorithm = self.product_mabs[0].__class__
+
+        normalized_budget_steps = self.budget_steps / self.env.total_budget
+
+        self.product_mabs = [
+            algorithm(self.rng, self.n_budget_steps, normalized_budget_steps)
+            for _ in range(self.n_products)
+        ]
 
     def show_progress(self, fig: plt.Figure):
         pass
