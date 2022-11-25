@@ -159,7 +159,9 @@ class ChangeDetectionLearner(Learner):
             # If the average reward of the older K values is significantly larger
             # than the average reward of the newer K values, a change is detected
             avg_recent_reward = np.mean(self.collected_rewards[-window:])
-            avg_previous_reward = np.mean(self.collected_rewards[-window * 2 : -window])
+            avg_previous_reward = np.mean(
+                self.collected_rewards[(-2 * window) : -window]
+            )
 
             diff = avg_previous_reward - avg_recent_reward
 
