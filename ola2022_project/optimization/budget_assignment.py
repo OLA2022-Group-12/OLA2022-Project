@@ -69,14 +69,14 @@ def budget_assignment(c):
     # A list of the final allocations that will give the optimal budget
     # utilization
     final_allocs = [last_alloc]
-    remaining_budget = m - 1 - last_alloc
+    remaining_budget = m - last_alloc
 
     # This will loop backwards through allocs, excluding the last row, so from n - 2 to 0
     for i in range(n - 2, -1, -1):
         # Based on the remaining_budget, we take the max of the remaining
         # possible cumulative values that we have in the dynamic programming
         # table
-        sub_dp = dp[i, : remaining_budget + 1]
+        sub_dp = dp[i, :remaining_budget]
         sub_best_index = np.argmax(sub_dp) if len(sub_dp) > 0 else 0
 
         # Convert the index we chose into the actual allocation that was done
