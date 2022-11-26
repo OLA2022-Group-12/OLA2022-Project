@@ -23,7 +23,7 @@ def budget_assignment(c):
         a numpy vector where row i has the index of selected column j of C
     """
 
-    n, m = np.shape(c)    
+    n, m = np.shape(c)
     if m == 0 or n == 0:
         return np.array([])
 

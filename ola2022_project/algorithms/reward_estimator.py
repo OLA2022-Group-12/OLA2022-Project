@@ -15,7 +15,11 @@ but only a close one. - TODO
 
 
 def clairvoyant_reward(
-    env: EnvironmentData, population: int, max_budget: int, n_budget_steps: int, custom_superarm=None
+    env: EnvironmentData,
+    population: int,
+    max_budget: int,
+    n_budget_steps: int,
+    custom_superarm=None,
 ):
 
     """Computes the average reward playing the optimal superarm according
@@ -47,7 +51,11 @@ def clairvoyant_reward(
         optimal_assignment = custom_superarm
 
     deterministic_day = get_day_of_interactions(
-        np.random.default_rng(), population, (optimal_assignment, None), env, deterministic=True
+        np.random.default_rng(),
+        population,
+        (optimal_assignment, None),
+        env,
+        deterministic=True,
     )
     units_sold = np.array(
         [interaction.items_bought for interaction in deterministic_day]
