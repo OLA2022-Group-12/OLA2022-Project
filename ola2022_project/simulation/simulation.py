@@ -147,9 +147,9 @@ class Simulation:
                     self.rng,
                     self.n_budget_steps,
                     self.masked_env,
-                    mab_algorithm=self.learner_params["mab_algorithm"],
-                    window_size=self.learner_params["window_size"],
-                    units_less=self.learner_params["units_less"],
+                    mab_algorithm=self.learner_params.get("mab_algorithm"),
+                    window_size=self.learner_params.get("window_size"),
+                    units_less=self.learner_params.get("units_less"),
                 )
 
             else:

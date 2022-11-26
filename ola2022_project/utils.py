@@ -141,9 +141,9 @@ def calculate_aggregated_budget_value(
     return aggregated_budget_value
 
 
-def replace_zeros(array, replace_with=1e-16, tollerance=1e-10):
+def replace_non_positive(array, replace_with=1e-16, tollerance=1e-10):
 
-    """Replaces every number close to 0 with the specified number.
+    """Replaces every number close to 0 or negative with the specified number.
     The check is made using the tolerance argument.
 
     Arguments:

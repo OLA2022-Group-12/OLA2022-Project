@@ -89,7 +89,6 @@ class AlphaUnitslessLearner(Learner):
         ]
 
         aggregated_budget_value_matrix = np.array(aggregated_budget_value_matrix)
-
         best_allocation_index = budget_assignment(aggregated_budget_value_matrix)
         best_allocation = self.budget_steps[best_allocation_index]
 

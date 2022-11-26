@@ -15,7 +15,7 @@ but only a close one. - TODO
 
 
 def clairvoyant_reward(
-    env: EnvironmentData, population: int, max_budget: int, n_budget_steps: int
+    env: EnvironmentData, population: int, max_budget: int, n_budget_steps: int, custom_superarm=None
 ):
 
     """Computes the average reward playing the optimal superarm according
@@ -37,13 +37,17 @@ def clairvoyant_reward(
         could be surpassed by a learner sometimes. This is perfectly normal.
     """
 
-    budget_steps = np.linspace(0, max_budget, n_budget_steps + 1)
+    budget_steps = np.linspace(0, max_budget, n_budget_steps)
 
-    optimal_superarm = find_optimal_superarm(env, budget_steps)
-    optimal_assignment = budget_steps[optimal_superarm]
+    if not custom_superarm:
+        optimal_superarm = find_optimal_superarm(env, budget_steps)
+        optimal_assignment = budget_steps[optimal_superarm]
+
+    else:
+        optimal_assignment = custom_superarm
 
     deterministic_day = get_day_of_interactions(
-        np.random.default_rng(), population, optimal_assignment, env, deterministic=True
+        np.random.default_rng(), population, (optimal_assignment, None), env, deterministic=True
     )
     units_sold = np.array(
         [interaction.items_bought for interaction in deterministic_day]
@@ -89,7 +93,6 @@ def find_optimal_superarm(
                     alpha_function(budget, params.upper_bound, params.max_useful_budget)
                     * multipliers[i]
                 )
-
     return budget_assignment(budget_value)
 
 
@@ -104,7 +107,7 @@ def _compute_reward_multiplier(
     """
 
     interactions = get_day_of_interactions(
-        np.random.default_rng(), population, budget, env, deterministic=True
+        np.random.default_rng(), population, (budget, None), env, deterministic=True
     )
     interactions_per_product = [
         [elem.items_bought for elem in interactions if elem.landed_on == i]

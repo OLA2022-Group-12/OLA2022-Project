@@ -6,7 +6,7 @@ from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
-from ola2022_project.utils import replace_zeros
+from ola2022_project.utils import replace_non_positive
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -430,7 +430,7 @@ def get_day_of_interactions(
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        alpha_ratios = replace_zeros(alpha_ratios)
+        alpha_ratios = replace_non_positive(alpha_ratios)
 
         if not deterministic:
             alpha_ratios_noisy = rng.dirichlet(np.array(alpha_ratios) * de_noise)
@@ -705,7 +705,7 @@ def simple_abrupt_change(env: EnvironmentData, product: int, factor: float):
 
             # If diff is positive it means that total_ratio is greater than 1
             diff = total_ratio - 1
-            # In this case re-normalize the ratios so that their sum do not exceed 1
+            # In this case re-normalize the ratios so that their sum does not exceed 1
             if diff > 0:
                 decrement = diff / len(env.product_prices)
                 for i in range(len(class_parameters)):
