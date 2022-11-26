@@ -1,7 +1,7 @@
 import logging
 from aenum import Enum, NoAlias
 
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union, Any
 from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
@@ -338,9 +338,10 @@ def generate_graph(rng, size, fully_connected, zeros_probability):
 
 
 def get_day_of_interactions(
-    rng: np.random.default_rng,
-    population,
-    budgets,
+    rng: np.random.Generator,
+    population: int,
+    # TODO proper annotations when structure is known
+    budgets_with_features: Union[List[int], Tuple[List[int], Any]],
     env_data: EnvironmentData,
     de_noise=1e3,
     deterministic=False,
@@ -356,8 +357,8 @@ def get_day_of_interactions(
         num_customers: total number of customers that will make interactions in
             a day
 
-        budgets: numpy array of 5 integers containing the budget for each
-            product. The i-element is the budget for the i+1 product
+        budgets: Either a numpy array of integers containing the budget for each
+            product. Or two lists of budget and features for each budget list.
 
         env_data: instance of Environment_data
 
@@ -387,12 +388,16 @@ def get_day_of_interactions(
     )
 
     # Splits actual budgets and features
-    budgets, features = budgets
+    if isinstance(budgets_with_features, tuple):
+        budgets, features = budgets_with_features
+    else:
+        # Got only single array
+        budgets = budgets_with_features
+        features = None
 
     # If there are no features it means that we are optimizing for a
     # single context (no splitting has happened)
     if features is None or len(features) == 0:
-        budgets = np.squeeze(budgets)
         budget_allocation = np.array(
             [np.array(budgets) / n_classes for _ in range(n_classes)]
         )
