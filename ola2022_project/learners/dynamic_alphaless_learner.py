@@ -160,11 +160,7 @@ class ChangeDetectionLearner(Learner):
             # than the average reward of the newer K values, a change is detected
             avg_recent_reward = np.mean(self.collected_rewards[-window:])
             avg_previous_reward = np.mean(
-<<<<<<< HEAD
-                self.collected_rewards[(-window * 2) : -window]
-=======
                 self.collected_rewards[(-2 * window) : -window]
->>>>>>> cbc794d2c8b77bb50426e71ef17aa1e9a396e1f6
             )
 
             diff = avg_previous_reward - avg_recent_reward
