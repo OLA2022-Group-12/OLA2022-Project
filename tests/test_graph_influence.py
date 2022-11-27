@@ -6,6 +6,7 @@ from ola2022_project.optimization.graph_influence import (
     make_influence_graph,
 )
 
+
 @given(st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False))
 def test_single_direct_neighbor(factor):
     graph = np.zeros((2, 2))
