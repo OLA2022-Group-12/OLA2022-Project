@@ -1,4 +1,4 @@
 from ola2022_project.optimization.budget_assignment import budget_assignment  # noqa
 from ola2022_project.optimization.graph_influence import (  # noqa
-    get_expected_value_per_node,
+    get_expected_influence_per_product,
 )
