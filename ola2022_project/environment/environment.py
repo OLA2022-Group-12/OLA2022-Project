@@ -6,7 +6,7 @@ from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
 from numpy.random import default_rng
-from ola2022_project.utils import replace_zeros
+from ola2022_project.utils import replace_non_positive
 
 """The correct use of this module is to construct the class
 Environment_data by using the function example_environment which returns an
@@ -51,6 +51,7 @@ class Step(Enum):
     ONE = ("classes_parameters",)
     TWO = ("classes_parameters",)
     THREE = ("graph",)
+    FOUR = ("classes_parameters",)
     FIVE = ("classes_parameters",)
 
 
@@ -429,7 +430,7 @@ def get_day_of_interactions(
 
         # Replace ratios that are 0 with machine-espilon (10^-16) to ensure
         # compatibility with the Dirichlet function
-        alpha_ratios = replace_zeros(alpha_ratios)
+        alpha_ratios = replace_non_positive(alpha_ratios)
 
         if not deterministic:
             alpha_ratios_noisy = rng.dirichlet(np.array(alpha_ratios) * de_noise)
@@ -670,25 +671,20 @@ def simple_abrupt_change(env: EnvironmentData, product: int, factor: float):
 
     """Applies an abrupt change on the specified product.
     For every class, the upper_bound parameter of the specified product is multiplied
-    by the argument factor. Useful for reducing the appeal of a product for all the
-    classes by using a 0 < factor < 1
+    by the argument factor. Useful for reducing or increasing the appeal of a product for all the
+    classes by using a factor > 0
 
     Arguments:
         env: instance of EnvironmentData
 
         product: integer between 0 and 4 representing the product to adjust
 
-        factor: a float between 0 and 1 that will be multiplied with the upper bounds
+        factor: a positive float that will be multiplied with the upper bounds
             of the specified product
     """
 
-    # This simple function only works with values of the factor parameter in the range [0,1]
-    # because a negative value cannot be used in this context, and a >1 value could lead to
-    # a sum of alpha ratios greater than 1
-    if factor < 0 or factor > 1:
-        raise ValueError(
-            "Cannot apply abrupt change with values outside the [0,1] interval."
-        )
+    if factor < 0:
+        raise ValueError("Cannot apply abrupt change with negative values.")
 
     for class_params in env.classes_parameters:
         params = class_params[product]
@@ -697,6 +693,27 @@ def simple_abrupt_change(env: EnvironmentData, product: int, factor: float):
             params.upper_bound * factor,
             params.max_useful_budget,
         )
+
+    # If factor is greater than 1 then some classes could have a ratio greater than one
+    if factor > 1:
+        for class_parameters in env.classes_parameters:
+            total_ratio = 0
+
+            # Here we compute the population ratio for every class
+            for product_params in class_parameters:
+                total_ratio += product_params.upper_bound
+
+            # If diff is positive it means that total_ratio is greater than 1
+            diff = total_ratio - 1
+            # In this case re-normalize the ratios so that their sum does not exceed 1
+            if diff > 0:
+                decrement = diff / len(env.product_prices)
+                for i in range(len(class_parameters)):
+                    class_parameters[i] = UserClassParameters(
+                        class_parameters[i].reservation_price,
+                        class_parameters[i].upper_bound - decrement,
+                        class_parameters[i].max_useful_budget,
+                    )
 
 
 def feature_filter(dataset, features: List[Feature]):

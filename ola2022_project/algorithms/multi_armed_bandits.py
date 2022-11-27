@@ -17,11 +17,11 @@ class BaseMAB:
         self.n_arms = n_arms
         self.t = 0
         self.rewards_per_arm = [[] for _ in range(n_arms)]
-        self.collected_rewards = np.array([])
+        self.collected_rewards = list()
 
     def _update_observations(self, pulled_arm, reward):
         self.rewards_per_arm[pulled_arm].append(reward)
-        self.collected_rewards = np.append(self.collected_rewards, reward)
+        self.collected_rewards.append(reward)
 
 
 class GPTSLearner(BaseMAB):
@@ -68,7 +68,7 @@ class GPTSLearner(BaseMAB):
 
     def _update_model(self):
         x = np.atleast_2d(self.pulled_arms).T
-        y = self.collected_rewards / self.normalize_factor
+        y = np.array(self.collected_rewards) / self.normalize_factor
         self.gp.fit(x, y)
         self.means, self.sigmas = self.gp.predict(
             np.atleast_2d(self.arms).T, return_std=True
@@ -103,6 +103,10 @@ class GPTSLearner(BaseMAB):
         return self.rng.normal(
             self.means * self.normalize_factor, self.sigmas * self.normalize_factor
         )
+
+    def delete_first_observation(self):
+        del self.pulled_arms[0]
+        del self.collected_rewards[0]
 
 
 class GPUCB1Learner(GPTSLearner):
