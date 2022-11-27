@@ -151,14 +151,14 @@ def make_influence_graph(
     return influence_graph
 
 
-def get_expected_influence_per_product(
+def get_influence_per_product(
     graph: NDArray[np.float64],
     product_prices: List[float],
     reservation_prices: List[float],
     next_products: List[Tuple[int, int]],
     lam: float,
 ) -> List[float]:
-    """Get the expected influence of all products.
+    """Get the influence of all products.
 
     This is a convenience method to call both `make_influence_graph` and
     `get_influence_of_seed` for all products, see those methods for more

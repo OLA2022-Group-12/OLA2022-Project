@@ -12,7 +12,7 @@ from ola2022_project.environment.environment import (
     Feature,
 )
 from ola2022_project.learners import Learner
-from ola2022_project.optimization import budget_assignment, get_expected_influence_per_product
+from ola2022_project.optimization import budget_assignment, get_influence_per_product
 from ola2022_project.utils import calculate_aggregated_budget_value
 
 
@@ -82,7 +82,7 @@ class GraphlessLearner(Learner):
 
         product_graph_landing_values_for_each_user = np.array(
             [
-                get_expected_influence_per_product(
+                get_influence_per_product(
                     graph,
                     data.product_prices,
                     [p.reservation_price for p in user_class],  # noqa
