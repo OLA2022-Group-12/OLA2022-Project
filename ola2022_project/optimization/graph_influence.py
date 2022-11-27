@@ -134,6 +134,11 @@ def make_influence_graph(
         # automatically overwrite if there exists multiple paths to a single
         # product. I.e 1 -> 2 -> 3, 1 -> 3, the latter probability will be used
         # instead of former.
+        # TODO actually this is slightly incorrect, as if a node IS NOT
+        # activated by the higher probability, the lower probability also
+        # applies. Is this as easy as a sum here? I.e. if 3 IS NOT activated by
+        # 1 in the example above, 2 has a probability to activate it. However
+        # this should be "irrelevent" in our example graph.
         for j, indirect_neighbor in enumerate(next_products[direct_neighbor]):
             if (
                 product_prices[indirect_neighbor]
