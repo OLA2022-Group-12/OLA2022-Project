@@ -97,10 +97,10 @@ def find_optimal_superarm(
         for j, budget in enumerate(budget_steps):
             for user_class in range(n_classes):
                 params = env.classes_parameters[user_class][i]
-                budget_value[i, j] += (
-                    alpha_function(budget, params.upper_bound, params.max_useful_budget)
-                    * multipliers[i]
+                budget_value[i, j] += alpha_function(
+                    budget / n_classes, params.upper_bound, params.max_useful_budget
                 )
+            budget_value[i, j] * multipliers[i]
     return budget_assignment(budget_value)
 
 
