@@ -18,7 +18,7 @@ def get_influence_of_seed(
     the graph will activate when the adjacency matrix contains the activation
     weight/probability.
 
-    This function is specialized for the following criterions:
+    This function is specialized for the following criteria:
         - Only considers neighbors up to three degress of separation from the
           seed
         - A node can only be activated once
