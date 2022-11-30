@@ -1,7 +1,7 @@
 import logging
 from aenum import Enum, NoAlias
 
-from typing import Optional, List, Tuple, Union, Any
+from typing import Optional, List, Tuple, Dict, Union, Any
 from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
@@ -74,7 +74,7 @@ class EnvironmentData:
     class_ratios: List[float]
 
     # Features associated to every class
-    class_features: List[List]
+    class_features: Dict[List[Feature], int]
 
     # Price of the 5 products
     product_prices: List[float]
@@ -135,7 +135,7 @@ class MaskedEnvironmentData:
     class_ratios: Optional[List[float]] = None
 
     # Features associated to every class
-    class_features: Optional[List[List]] = None
+    class_features: Optional[Dict[List[Feature], int]] = None
 
     # List of class parameters for each class and product, implemented as list
     # of lists of UserClassParameters. Each class has distinct parameters for
@@ -165,14 +165,12 @@ def example_environment(
     rng=default_rng(),
     total_budget=300,
     class_ratios=[0.3, 0.6, 0.1],
-    class_features=[
-        [
-            [Feature("feature_1", 0), Feature("feature_2", 0)],
-            [Feature("feature_1", 0), Feature("feature_2", 1)],
-        ],
-        [[Feature("feature_1", 1), Feature("feature_2", 0)]],
-        [[Feature("feature_1", 1), Feature("feature_2", 1)]],
-    ],
+    class_features={
+        [Feature("feature_1", 0), Feature("feature_2", 0)]: 0,
+        [Feature("feature_1", 0), Feature("feature_2", 1)]: 0,
+        [Feature("feature_1", 1), Feature("feature_2", 0)]: 1,
+        [Feature("feature_1", 1), Feature("feature_2", 1)]: 2,
+    },
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
         [
@@ -405,13 +403,52 @@ def get_day_of_interactions(
 
     # If we have some features it means that we are optimizing for more than
     # one context
-    # TODO implement this
     else:
-        raise RuntimeError(
-            "Cannot handle multiple contexts, still has to be implemented"
+
+        # Reshaping budgets array so that on every row we have the budget assigned to each context
+        budget_per_class = np.reshape(
+            budgets, (len(features), len(env_data.product_prices))
         )
 
-    # total_interactions = list()
+        # Generates a list of sets where every set contains the classes each context is targetting
+        contexts = list()
+        for context in features:
+            # Using sets here to easily ignore duplicates
+            targeted_classes = {
+                env_data.class_features[feature_pair] for feature_pair in context
+            }
+            contexts.append(targeted_classes)
+
+        # To make sure that the context are properly generated, we make sure that different contexts
+        # are not targetting the same class multiple times. This is done by flattening the contexts
+        # list and checking if there are any duplicates thanks to the property of sets
+        duplicate_check = [target for target in context for context in contexts]
+        if len(duplicate_check) > len(set(duplicate_check)):
+            raise RuntimeError(
+                """Bad contexts assignment! One class is targeted by multiple contexts.
+                The same features are probably appearing in different contexts."""
+            )
+
+        # Here we create a dictionary where the key is the user_class and the value is the
+        # assigned budget to that class
+        budget_assignment_per_class = dict()
+        for user_class in range(len(env_data.class_ratios)):
+            for classes_in_context, context_budget in zip(contexts, budget_per_class):
+                if user_class in classes_in_context:
+                    budget_assignment_per_class[user_class] = context_budget / len(
+                        classes_in_context
+                    )
+                    break
+
+        # If the number of items in the dictionary is different than the number of classes it means
+        # that something went wrong in the context generation step
+        if len(budget_assignment_per_class) != len(env_data.class_ratios):
+            raise RuntimeError("Bad context assignment! One or more classes not found.")
+
+        # The dictionary is sorted by key so that we have class 0, 1 and 2 in the right order
+        # and then its values become the budget allocation
+        budget_allocation = dict(sorted(budget_assignment_per_class.items())).values()
+
     interaction_blueprints = []
 
     # Generate interactions for every class
