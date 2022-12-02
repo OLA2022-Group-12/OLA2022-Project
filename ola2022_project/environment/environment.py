@@ -405,6 +405,8 @@ def get_day_of_interactions(
     # one context
     else:
 
+        logger.debug(f"Targeting {len(features)} context in current environment")
+
         # Reshaping budgets array so that on every row we have the budget assigned to each context
         budget_per_class = np.reshape(
             budgets, (len(features), len(env_data.product_prices))
