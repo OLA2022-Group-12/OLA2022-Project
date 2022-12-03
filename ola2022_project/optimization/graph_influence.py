@@ -56,7 +56,16 @@ def get_influence_of_seed(
     # Probability to activate neighbors of direct neighbors.
     # After taking the matrix power, the row of our seed is the probability to
     # reach the node j from the start node. We multiply by (1 - node_active) to
-    # ensure that already active nodes don't contribute more than once.
+    # ensure that already active nodes don't contribute more than once. Why this
+    # works is outlined below:
+    #
+    # The entry at position (i,j) of A^k is the sum of the products of all
+    # weights of all paths from node i to node j of length exactly k. [..] It
+    # also has applications in stochastics, where the product of weights is the
+    # product of probabilities to find a joined probability.
+    #
+    #  - https://math.stackexchange.com/a/3552426
+    #
     second_graph = (
         np.linalg.matrix_power(graph, 2) if graph_squared is None else graph_squared
     )
