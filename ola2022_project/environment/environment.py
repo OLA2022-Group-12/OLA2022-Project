@@ -74,7 +74,7 @@ class EnvironmentData:
     class_ratios: List[float]
 
     # Features associated to every class
-    class_features: Dict[List[Feature], int]
+    class_features: Dict[Tuple[Feature, Feature], int]
 
     # Price of the 5 products
     product_prices: List[float]
@@ -135,7 +135,7 @@ class MaskedEnvironmentData:
     class_ratios: Optional[List[float]] = None
 
     # Features associated to every class
-    class_features: Optional[Dict[List[Feature], int]] = None
+    class_features: Optional[Dict[Tuple[Feature, Feature], int]] = None
 
     # List of class parameters for each class and product, implemented as list
     # of lists of UserClassParameters. Each class has distinct parameters for
@@ -166,10 +166,10 @@ def example_environment(
     total_budget=300,
     class_ratios=[0.3, 0.6, 0.1],
     class_features={
-        [Feature("feature_1", 0), Feature("feature_2", 0)]: 0,
-        [Feature("feature_1", 0), Feature("feature_2", 1)]: 0,
-        [Feature("feature_1", 1), Feature("feature_2", 0)]: 1,
-        [Feature("feature_1", 1), Feature("feature_2", 1)]: 2,
+        (Feature("feature_1", 0), Feature("feature_2", 0)): 0,
+        (Feature("feature_1", 0), Feature("feature_2", 1)): 0,
+        (Feature("feature_1", 1), Feature("feature_2", 0)): 1,
+        (Feature("feature_1", 1), Feature("feature_2", 1)): 2,
     },
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
@@ -408,39 +408,48 @@ def get_day_of_interactions(
         logger.debug(f"Targeting {len(features)} context in current environment")
 
         # Reshaping budgets array so that on every row we have the budget assigned to each context
-        budget_per_class = np.reshape(
+        budget_per_context = np.reshape(
             budgets, (len(features), len(env_data.product_prices))
         )
 
         # Generates a list of sets where every set contains the classes each context is targetting
         contexts = list()
         for context in features:
+
+            # Reconstructing feature pairs
+            feature_pairs = list()
+            for f in context:
+                if f.name == "feature_1":
+                    for value in [0, 1]:
+                        feature_pairs.append(
+                            (Feature("feature_1", f.value), Feature("feature_2", value))
+                        )
+
+                else:
+                    for value in [0, 1]:
+                        feature_pairs.append(
+                            (Feature("feature_1", value), Feature("feature_2", f.value))
+                        )
+
             # Using sets here to easily ignore duplicates
             targeted_classes = {
-                env_data.class_features[feature_pair] for feature_pair in context
+                env_data.class_features[feature_pair] for feature_pair in feature_pairs
             }
             contexts.append(targeted_classes)
-
-        # To make sure that the context are properly generated, we make sure that different contexts
-        # are not targetting the same class multiple times. This is done by flattening the contexts
-        # list and checking if there are any duplicates thanks to the property of sets
-        duplicate_check = [target for target in context for context in contexts]
-        if len(duplicate_check) > len(set(duplicate_check)):
-            raise RuntimeError(
-                """Bad contexts assignment! One class is targeted by multiple contexts.
-                The same features are probably appearing in different contexts."""
-            )
 
         # Here we create a dictionary where the key is the user_class and the value is the
         # assigned budget to that class
         budget_assignment_per_class = dict()
+
         for user_class in range(len(env_data.class_ratios)):
-            for classes_in_context, context_budget in zip(contexts, budget_per_class):
+
+            budget_assignment_per_class[user_class] = 0
+
+            for classes_in_context, context_budget in zip(contexts, budget_per_context):
                 if user_class in classes_in_context:
-                    budget_assignment_per_class[user_class] = context_budget / len(
+                    budget_assignment_per_class[user_class] += context_budget / len(
                         classes_in_context
                     )
-                    break
 
         # If the number of items in the dictionary is different than the number of classes it means
         # that something went wrong in the context generation step
@@ -682,6 +691,13 @@ def _generate_interactions(
 
     interactions = []
 
+    features_per_classes = []
+    for _ in range(len(env.class_ratios)):
+        features_per_classes.append([])
+
+    for f, c in env.class_features.items():
+        features_per_classes[c].append(f)
+
     for blueprint in blueprints:
 
         for _ in range(blueprint.n_users):
@@ -693,10 +709,10 @@ def _generate_interactions(
                     if items_bought[i] == 1:
                         items_bought[i] = rng.integers(1, env.max_items, endpoint=True)
 
-            feature_idx = rng.integers(len(env.class_features[blueprint.user_class]))
+            feature_idx = rng.integers(len(features_per_classes[blueprint.user_class]))
             interactions.append(
                 Interaction(
-                    env.class_features[blueprint.user_class][feature_idx],
+                    features_per_classes[blueprint.user_class][feature_idx],
                     blueprint.user_class,
                     items_bought,
                     blueprint.landed_on,
