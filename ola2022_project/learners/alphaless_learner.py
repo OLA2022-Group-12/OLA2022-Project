@@ -77,7 +77,9 @@ class AlphaUnitslessLearner(Learner):
 
         elif mab_algorithm == Mab.GPUCB1:
             self.product_mabs = [
-                GPUCB1Learner(rng, self.n_budget_steps, normalized_budget_steps)
+                GPUCB1Learner(
+                    rng, self.n_budget_steps, normalized_budget_steps, confidence=1
+                )
                 for _ in range(self.n_products)
             ]
 

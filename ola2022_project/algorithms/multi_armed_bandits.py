@@ -122,7 +122,7 @@ class GPUCB1Learner(GPTSLearner):
         l_param=0.1,
         normalize_factor=100,
         disable_warnings=True,
-        confidence=3,
+        confidence=4,
     ):
         self.confidence = confidence
         super().__init__(
