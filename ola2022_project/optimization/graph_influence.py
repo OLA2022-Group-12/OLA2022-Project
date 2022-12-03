@@ -69,6 +69,9 @@ def get_influence_of_seed(
     second_graph = (
         np.linalg.matrix_power(graph, 2) if graph_squared is None else graph_squared
     )
+    # TODO Actually maybe we can prevent matrix multiplication as we later
+    # "extract" only a row (i.e. the seeds row) from the matrix. That could
+    # potentially be a nice optimization.
     second_indirect_prob = second_graph[seed] * (1 - node_active)
 
     # Update active nodes with the source nodes of the last step
