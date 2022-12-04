@@ -86,9 +86,8 @@ class ContextualLearner(Learner):
             lower = i * self.n_products
             upper = (i + 1) * self.n_products
             budgets.append(best_allocation[lower:upper])
-            features.append(self.contexts[i].features)
-        features = np.squeeze(features)
-
+            if self.contexts[i].features:
+                features.append(self.contexts[i].features)
         return budgets, features
 
     def learn(
