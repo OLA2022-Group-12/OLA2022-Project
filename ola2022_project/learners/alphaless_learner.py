@@ -28,6 +28,7 @@ class AlphaUnitslessLearner(Learner):
         n_budget_steps,
         data: MaskedEnvironmentData,
         mab_algorithm=Mab.GPTS,
+        std_adjust=(15, 2, 0.75),
     ) -> None:
 
         """Creates a learner which works on unknown alpha functions.
@@ -71,7 +72,12 @@ class AlphaUnitslessLearner(Learner):
         # learners, one for each product
         if mab_algorithm == Mab.GPTS:
             self.product_mabs = [
-                GPTSLearner(rng, self.n_budget_steps, normalized_budget_steps)
+                GPTSLearner(
+                    rng,
+                    self.n_budget_steps,
+                    normalized_budget_steps,
+                    std_adjust=std_adjust,
+                )
                 for _ in range(self.n_products)
             ]
 
@@ -127,9 +133,16 @@ class AlphalessLearner(AlphaUnitslessLearner):
     """
 
     def __init__(
-        self, rng, n_budget_steps, data: MaskedEnvironmentData, mab_algorithm=Mab.GPTS
+        self,
+        rng,
+        n_budget_steps,
+        data: MaskedEnvironmentData,
+        mab_algorithm=Mab.GPTS,
+        std_adjust=(12, 10, 1),
     ) -> None:
-        super().__init__(rng, n_budget_steps, data, mab_algorithm)
+        super().__init__(
+            rng, n_budget_steps, data, mab_algorithm, std_adjust=std_adjust
+        )
 
     def predict_raw(self, data: MaskedEnvironmentData) -> np.ndarray:
 
