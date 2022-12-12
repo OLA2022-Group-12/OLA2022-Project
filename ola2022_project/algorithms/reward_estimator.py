@@ -65,7 +65,10 @@ def clairvoyant_reward(
 
 
 def find_optimal_superarm(
-    env: EnvironmentData, budget_steps: np.ndarray, aggregated=True
+    env_data: EnvironmentData,
+    budget_steps: np.ndarray,
+    aggregated=True,
+    custom_graph=None,
 ):
 
     """Given an environment and a numpy array of budget steps finds the optimal
@@ -86,6 +89,23 @@ def find_optimal_superarm(
         The total sum amounts to max_budget.
     """
 
+    if custom_graph is not None:
+        env = EnvironmentData(
+            total_budget=env_data.total_budget,
+            class_ratios=env_data.class_ratios,
+            class_features=env_data.class_features,
+            classes_parameters=env_data.classes_parameters,
+            product_prices=env_data.product_prices,
+            lam=env_data.lam,
+            max_items=env_data.max_items,
+            graph=custom_graph,
+            next_products=env_data.next_products,
+            random_noise=env_data.random_noise,
+        )
+
+    else:
+        env = env_data
+
     n_products = len(env.product_prices)
     n_budget_steps = len(budget_steps)
     n_classes = len(env.class_ratios)
@@ -100,7 +120,8 @@ def find_optimal_superarm(
                 budget_value[i, j] += alpha_function(
                     budget / n_classes, params.upper_bound, params.max_useful_budget
                 )
-            budget_value[i, j] * multipliers[i]
+            budget_value[i, j] *= multipliers[i]
+
     return budget_assignment(budget_value)
 
 
