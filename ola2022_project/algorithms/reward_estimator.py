@@ -121,6 +121,7 @@ def find_optimal_superarm(
                     budget / n_classes, params.upper_bound, params.max_useful_budget
                 )
             budget_value[i, j] *= multipliers[i]
+
     return budget_assignment(budget_value)
 
 
