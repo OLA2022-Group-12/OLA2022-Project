@@ -36,12 +36,13 @@ class GPTSLearner(BaseMAB):
         rng,
         n_arms,
         arms,
-        std=10,
+        std=5,
         kernel_range=(1e-2, 1e4),
         kernel_scale=1,
         theta=1.0,
         l_param=0.1,
         normalize_factor=100,
+        std_adjust=(20, 5, 0.5),
         disable_warnings=True,
     ):
         super().__init__(n_arms)
@@ -56,8 +57,11 @@ class GPTSLearner(BaseMAB):
             Ck(theta, kernel_range) * RBF(l_param, kernel_range) * kernel_scale
         )
         self.gp = GaussianProcessRegressor(
-            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=9
+            kernel=self.kernel, alpha=self.alpha**2, n_restarts_optimizer=6
         )
+
+        self.std_adjust = std_adjust
+        self.adj = self.std_adjust[0]
 
         if disable_warnings:
             warnings.filterwarnings("ignore")
@@ -93,6 +97,12 @@ class GPTSLearner(BaseMAB):
         self._update_observations(pulled_arm, reward)
         self._update_model()
 
+        if self.t > self.n_arms / 8 and self.t <= self.n_arms / 4:
+            self.adj = self.std_adjust[1]
+
+        if self.t > self.n_arms / 4:
+            self.adj = self.std_adjust[2]
+
     def estimation(self):
 
         """Returns an estimation of the reward for every budget step.
@@ -100,8 +110,8 @@ class GPTSLearner(BaseMAB):
         Returns: a numpy array with n_budget_steps elements containing the
         estimated reward for every step
         """
-        return self.rng.normal(
-            self.means * self.normalize_factor, self.sigmas * self.normalize_factor
+        return (
+            self.rng.normal(self.means, self.sigmas * self.adj) * self.normalize_factor
         )
 
     def delete_first_observation(self):
@@ -115,14 +125,14 @@ class GPUCB1Learner(GPTSLearner):
         rng,
         n_arms,
         arms,
-        std=10,
+        std=5,
         kernel_range=(1e-2, 1e4),
         kernel_scale=1,
         theta=1.0,
         l_param=0.1,
         normalize_factor=100,
         disable_warnings=True,
-        confidence=3,
+        confidence=0,
     ):
         self.confidence = confidence
         super().__init__(
@@ -137,6 +147,7 @@ class GPUCB1Learner(GPTSLearner):
             normalize_factor=normalize_factor,
             disable_warnings=disable_warnings,
         )
+        self.means = np.array([self.rng.integers(1, 20) for _ in range(self.n_arms)])
 
     def estimation(self):
 
@@ -144,13 +155,21 @@ class GPUCB1Learner(GPTSLearner):
         interval and modeling it as a confidence bound.
         """
 
-        # Workaround to fix optimization edge case with null weights
-        if self.t <= 1:
-            return [self.rng.integers(1, 10) for _ in range(self.n_arms)]
+        upper_bounds = np.array(
+            (self.means * self.normalize_factor + self.confidence * 1.96 * self.sigmas)
+        )
 
-        upper_bounds = (
-            self.means + self.confidence * 1.96 * self.sigmas
-        ) * self.normalize_factor
+        # Workaround to fix optimization edge case with null weights
+        if self.t < self.n_arms / 3:
+            upper_bounds = self.means + np.array(
+                [self.rng.integers(1, 100) for _ in range(self.n_arms)]
+            )
+
+        elif self.t < self.n_arms:
+            upper_bounds = self.means + 0.7 * np.array(
+                [self.rng.integers(1, 100) for _ in range(self.n_arms)]
+            )
+
         return upper_bounds
 
 
