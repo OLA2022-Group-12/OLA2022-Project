@@ -138,7 +138,7 @@ class Simulation:
 
         elif self.step == Step.THREE:
             # Creation of graphless learner
-            return GraphlessLearner(self.rng, self.n_budget_masked_env)
+            return GraphlessLearner(self.rng, self.n_budget_steps, self.masked_env)
 
         elif self.step == Step.FOUR:
 

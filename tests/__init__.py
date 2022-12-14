@@ -61,7 +61,7 @@ def generated_environment(draw):
                 # Max useful budget
                 st.floats(min_value=1, max_value=1000),
                 # Upper bound
-                st.integers(min_value=0.0, max_value=1),
+                st.floats(min_value=0.0, max_value=0.2),
             ).map(
                 lambda p: UserClassParameters(
                     reservation_price=p[0], max_useful_budget=p[1], upper_bound=p[2]
@@ -125,14 +125,12 @@ def generated_environment(draw):
     # I don't know how to make this more test-ish other than hardcoding id.
     # I don't much room to change values here and there. If someone has a
     # better idea they're welcome to implement it.
-    class_features = [
-        [
-            [Feature("feature_1", 0), Feature("feature_1", 0)],
-            [Feature("feature_1", 0), Feature("feature_1", 1)],
-        ],
-        [[Feature("feature_1", 1), Feature("feature_1", 0)]],
-        [[Feature("feature_1", 1), Feature("feature_1", 1)]],
-    ]
+    class_features = {
+        (Feature("feature_1", 0), Feature("feature_2", 0)): 0,
+        (Feature("feature_1", 0), Feature("feature_2", 1)): 0,
+        (Feature("feature_1", 1), Feature("feature_2", 0)): 1,
+        (Feature("feature_1", 1), Feature("feature_2", 1)): 2,
+    }
 
     next_products = draw(next_products_st)
     random_noise = st.floats(min_value=1e-16, max_value=0.1)

@@ -8,12 +8,12 @@ from scipy.stats import beta
 from ola2022_project.environment.environment import (
     MaskedEnvironmentData,
     Interaction,
-    alpha_function,
     Feature,
 )
+
+from ola2022_project.algorithms.reward_estimator import find_optimal_superarm
+
 from ola2022_project.learners import Learner
-from ola2022_project.optimization import budget_assignment, get_influence_per_product
-from ola2022_project.utils import calculate_aggregated_budget_value
 
 
 logger = logging.getLogger(__name__)
@@ -80,57 +80,9 @@ class GraphlessLearner(Learner):
         # Sample current estimation of graph
         graph = self.graph_estimation()
 
-        product_graph_landing_values_for_each_user = np.array(
-            [
-                get_influence_per_product(
-                    graph,
-                    data.product_prices,
-                    [p.reservation_price for p in user_class],  # noqa
-                    data.next_products,
-                    data.lam,
-                )
-                for user_class in data.classes_parameters
-            ]
-        )
+        best_allocation = find_optimal_superarm(data, budget_steps, custom_graph=graph)
 
-        product_graph_landing_values = np.sum(
-            product_graph_landing_values_for_each_user, axis=0
-        ) / np.sum(product_graph_landing_values_for_each_user)
-
-        logger.debug(product_graph_landing_values)
-
-        # We know the alpha function in the graphless learner, so use it
-        # directly here
-        class_budget_alphas = np.array(
-            [
-                [
-                    [
-                        alpha_function(budget, upper_bound, max_useful_budget)
-                        for budget in budget_steps
-                    ]
-                    for (_, upper_bound, max_useful_budget) in user_class
-                ]
-                for user_class in data.classes_parameters
-            ]
-        )
-
-        aggregated_budget_value_matrix = calculate_aggregated_budget_value(
-            product_graph_landing_values=list(product_graph_landing_values),
-            product_prices=data.product_prices,
-            class_budget_alphas=class_budget_alphas,
-            class_ratios=data.class_ratios,
-            class_reservation_prices=[
-                [float(p.reservation_price) for p in user_class]
-                for user_class in data.classes_parameters
-            ],
-        )
-
-        aggregated_budget_value_matrix = np.array(aggregated_budget_value_matrix)
-
-        best_allocation_index = budget_assignment(aggregated_budget_value_matrix)
-        best_allocation = self.budget_steps[best_allocation_index]
-
-        return best_allocation, None
+        return budget_steps[best_allocation], None
 
     def learn(
         self, interactions: List[Interaction], reward: float, prediction: np.ndarray
