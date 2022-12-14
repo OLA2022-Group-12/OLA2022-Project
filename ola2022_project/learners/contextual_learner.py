@@ -68,7 +68,7 @@ class ContextualLearner(Learner):
 
         self.features = features
         simulation = simulation.copy(include_learner=False)
-        simulation.step = Step.ONE
+        simulation.step = Step.TWO
         self.learners = [simulation.learner]
         self.contexts = [Context(simulation, [], 0, 1, 0, 0)]
 
@@ -86,9 +86,8 @@ class ContextualLearner(Learner):
             lower = i * self.n_products
             upper = (i + 1) * self.n_products
             budgets.append(best_allocation[lower:upper])
-            features.append(self.contexts[i].features)
-        features = np.squeeze(features)
-
+            if self.contexts[i].features:
+                features.append(self.contexts[i].features)
         return budgets, features
 
     def learn(
@@ -104,7 +103,7 @@ class ContextualLearner(Learner):
                 prediction[i],
             )
 
-    def context_generation(self, dataset):
+    def context_generation(self, dataset) -> List[str]:
 
         """Runs a context generation algorithm to decide if it's worth generating
         new contexts to target; if it is in fact convenient, it proceeds to update
@@ -112,6 +111,9 @@ class ContextualLearner(Learner):
 
         Arguments:
             dataset: current dataset of interactions that were gathered until now
+
+        Returns:
+            split information
         """
 
         self.contexts = partial_tree_generation(
@@ -120,6 +122,8 @@ class ContextualLearner(Learner):
             self.contexts,
         )
         self.learners = [context.learner_sim.learner for context in self.contexts]
+
+        return [context.features for context in self.contexts]
 
     def show_progress(self, fig: plt.Figure):
         pass

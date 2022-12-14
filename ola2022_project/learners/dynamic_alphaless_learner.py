@@ -151,7 +151,7 @@ class ChangeDetectionLearner(Learner):
         self.collected_rewards.append(reward)
 
         # Start change detection only when there is wnough values to compare
-        if self.t > self.threshold_window * 2:
+        if self.t >= self.threshold_window * 2:
 
             window = self.threshold_window
 

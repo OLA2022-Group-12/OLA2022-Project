@@ -245,10 +245,10 @@ def train_context(context: Context, dataset, update: bool = True):
         context.nums, n_reward, context.exp_prob, context.max_exp_reward
     )
 
-    print(f"Context features {context.features}")
-    print(f"Expected probability {context.exp_prob}")
-    print(f"Maximum expected reward {context.max_exp_reward}")
-    print(f"Weighted lower bound {context.weighted_bound}")
+    logger.debug(f"Context features {context.features}")
+    logger.debug(f"Expected probability {context.exp_prob}")
+    logger.debug(f"Maximum expected reward {context.max_exp_reward}")
+    logger.debug(f"Weighted lower bound {context.weighted_bound}")
 
 
 def tree_generation(
@@ -307,19 +307,38 @@ def partial_tree_generation(
         A list containing the contexts chosen by the algorithm
     """
 
-    # Update experimental rewards of old base contexts
+    splittable_features = []
+
     for context in root:
+        # Update experimental rewards of old base contexts
         train_context(context, dataset, update=False)
+        # Calculate splittable features for each context
+        splittable_features.append(
+            [
+                Feature(feature.name, None)
+                for feature in features
+                if all(
+                    map(
+                        lambda ctx_feature: feature.name != ctx_feature.name,
+                        context.features,
+                    )
+                )
+            ]
+        )
+
+    def gen_node_with_split_features(context_features):
+        context, split_features = context_features
+        return _none_context(
+            context,
+            _generate_tree_node(
+                context.learner_sim.copy(), dataset, split_features, context
+            ),
+        )
 
     ret_contexts = list(
         map(
-            lambda context: _none_context(
-                context,
-                _generate_tree_node(
-                    context.learner_sim.copy(), dataset, features, context
-                ),
-            ),
-            root,
+            lambda context_features: gen_node_with_split_features(context_features),
+            zip(root, splittable_features),
         )
     )
     return flatten_list(ret_contexts)

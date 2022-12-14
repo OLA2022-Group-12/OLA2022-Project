@@ -1,7 +1,7 @@
 import logging
 from aenum import Enum, NoAlias
 
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 from collections import namedtuple
 from dataclasses import dataclass, asdict
 import numpy as np
@@ -74,7 +74,7 @@ class EnvironmentData:
     class_ratios: List[float]
 
     # Features associated to every class
-    class_features: List[List]
+    class_features: Dict[Tuple[Feature, Feature], int]
 
     # Price of the 5 products
     product_prices: List[float]
@@ -135,7 +135,7 @@ class MaskedEnvironmentData:
     class_ratios: Optional[List[float]] = None
 
     # Features associated to every class
-    class_features: Optional[List[List]] = None
+    class_features: Optional[Dict[Tuple[Feature, Feature], int]] = None
 
     # List of class parameters for each class and product, implemented as list
     # of lists of UserClassParameters. Each class has distinct parameters for
@@ -165,14 +165,12 @@ def example_environment(
     rng=default_rng(),
     total_budget=300,
     class_ratios=[0.3, 0.6, 0.1],
-    class_features=[
-        [
-            [Feature("feature_1", 0), Feature("feature_2", 0)],
-            [Feature("feature_1", 0), Feature("feature_2", 1)],
-        ],
-        [[Feature("feature_1", 1), Feature("feature_2", 0)]],
-        [[Feature("feature_1", 1), Feature("feature_2", 1)]],
-    ],
+    class_features={
+        (Feature("feature_1", 0), Feature("feature_2", 0)): 0,
+        (Feature("feature_1", 0), Feature("feature_2", 1)): 0,
+        (Feature("feature_1", 1), Feature("feature_2", 0)): 1,
+        (Feature("feature_1", 1), Feature("feature_2", 1)): 2,
+    },
     product_prices=[3, 15, 8, 22, 1],
     classes_parameters=[
         [
@@ -338,9 +336,9 @@ def generate_graph(rng, size, fully_connected, zeros_probability):
 
 
 def get_day_of_interactions(
-    rng: np.random.default_rng,
-    population,
-    budgets,
+    rng: np.random.Generator,
+    population: int,
+    budgets_with_features: Tuple[np.ndarray, Optional[List[List[Feature]]]],
     env_data: EnvironmentData,
     de_noise=1e3,
     deterministic=False,
@@ -356,8 +354,8 @@ def get_day_of_interactions(
         num_customers: total number of customers that will make interactions in
             a day
 
-        budgets: numpy array of 5 integers containing the budget for each
-            product. The i-element is the budget for the i+1 product
+        budgets: Either a numpy array of integers containing the budget for each
+            product. Or two lists of budget and features for each budget list.
 
         env_data: instance of Environment_data
 
@@ -386,8 +384,7 @@ def get_day_of_interactions(
         f"Population divided between classes as follows: {customers_per_class}"
     )
 
-    # Splits actual budgets and features
-    budgets, features = budgets
+    budgets, features = budgets_with_features
 
     # If there are no features it means that we are optimizing for a
     # single context (no splitting has happened)
@@ -400,13 +397,63 @@ def get_day_of_interactions(
 
     # If we have some features it means that we are optimizing for more than
     # one context
-    # TODO implement this
     else:
-        raise RuntimeError(
-            "Cannot handle multiple contexts, still has to be implemented"
+
+        logger.debug(f"Targeting {len(features)} context in current environment")
+
+        # Reshaping budgets array so that on every row we have the budget assigned to each context
+        budget_per_context = np.reshape(
+            budgets, (len(features), len(env_data.product_prices))
         )
 
-    # total_interactions = list()
+        # Generates a list of sets where every set contains the classes each context is targetting
+        contexts = list()
+        for context in features:
+
+            # Reconstructing feature pairs
+            feature_pairs = list()
+            for f in context:
+                if f.name == "feature_1":
+                    for value in [0, 1]:
+                        feature_pairs.append(
+                            (Feature("feature_1", f.value), Feature("feature_2", value))
+                        )
+
+                else:
+                    for value in [0, 1]:
+                        feature_pairs.append(
+                            (Feature("feature_1", value), Feature("feature_2", f.value))
+                        )
+
+            # Using sets here to easily ignore duplicates
+            targeted_classes = {
+                env_data.class_features[feature_pair] for feature_pair in feature_pairs
+            }
+            contexts.append(targeted_classes)
+
+        # Here we create a dictionary where the key is the user_class and the value is the
+        # assigned budget to that class
+        budget_assignment_per_class = dict()
+
+        for user_class in range(len(env_data.class_ratios)):
+
+            budget_assignment_per_class[user_class] = 0
+
+            for classes_in_context, context_budget in zip(contexts, budget_per_context):
+                if user_class in classes_in_context:
+                    budget_assignment_per_class[user_class] += context_budget / len(
+                        classes_in_context
+                    )
+
+        # If the number of items in the dictionary is different than the number of classes it means
+        # that something went wrong in the context generation step
+        if len(budget_assignment_per_class) != len(env_data.class_ratios):
+            raise RuntimeError("Bad context assignment! One or more classes not found.")
+
+        # The dictionary is sorted by key so that we have class 0, 1 and 2 in the right order
+        # and then its values become the budget allocation
+        budget_allocation = dict(sorted(budget_assignment_per_class.items())).values()
+
     interaction_blueprints = []
 
     # Generate interactions for every class
@@ -638,6 +685,13 @@ def _generate_interactions(
 
     interactions = []
 
+    features_per_classes = []
+    for _ in range(len(env.class_ratios)):
+        features_per_classes.append([])
+
+    for f, c in env.class_features.items():
+        features_per_classes[c].append(f)
+
     for blueprint in blueprints:
 
         for _ in range(blueprint.n_users):
@@ -649,10 +703,10 @@ def _generate_interactions(
                     if items_bought[i] == 1:
                         items_bought[i] = rng.integers(1, env.max_items, endpoint=True)
 
-            feature_idx = rng.integers(len(env.class_features[blueprint.user_class]))
+            feature_idx = rng.integers(len(features_per_classes[blueprint.user_class]))
             interactions.append(
                 Interaction(
-                    env.class_features[blueprint.user_class][feature_idx],
+                    features_per_classes[blueprint.user_class][feature_idx],
                     blueprint.user_class,
                     items_bought,
                     blueprint.landed_on,
