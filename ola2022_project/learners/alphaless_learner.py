@@ -94,6 +94,26 @@ class AlphaUnitslessLearner(Learner):
 
         return best_allocation, None
 
+    def predict_raw(self, data: MaskedEnvironmentData) -> np.ndarray:
+
+        """Acts as the predict function but doesn't pass the result through the optimizer
+        and returns the aggregated budget value matrix.
+
+        Arguments:
+            data: up-to-date, complete or incomplete environment information that is
+                used by the learner in order to make the inference
+
+        Returns:
+            a list of values, corresponding to an estimation of the earnings for each
+            product given the knowledge obtained by the learner until now
+        """
+
+        aggregated_budget_value_matrix = [
+            self.product_mabs[i].estimation() for i in range(len(self.product_mabs))
+        ]
+
+        return np.array(aggregated_budget_value_matrix)
+
     def learn(self, _, reward: float, prediction: np.ndarray):
         for i, p in enumerate(prediction):
             prediction_index = np.where(self.budget_steps == p)[0][0]
@@ -128,26 +148,6 @@ class AlphalessLearner(AlphaUnitslessLearner):
         self, rng, n_budget_steps, data: MaskedEnvironmentData, mab_algorithm=Mab.GPTS
     ) -> None:
         super().__init__(rng, n_budget_steps, data, mab_algorithm)
-
-    def predict_raw(self, data: MaskedEnvironmentData) -> np.ndarray:
-
-        """Acts as the predict function but doesn't pass the result through the optimizer
-        and returns the aggregated budget value matrix.
-
-        Arguments:
-            data: up-to-date, complete or incomplete environment information that is
-                used by the learner in order to make the inference
-
-        Returns:
-            a list of values, corresponding to an estimation of the earnings for each
-            product given the knowledge obtained by the learner until now
-        """
-
-        aggregated_budget_value_matrix = [
-            self.product_mabs[i].estimation() for i in range(len(self.product_mabs))
-        ]
-
-        return np.array(aggregated_budget_value_matrix)
 
     def learn(
         self, interactions: List[AggregatedInteraction], _, prediction: np.ndarray

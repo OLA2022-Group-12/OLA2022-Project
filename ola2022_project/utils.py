@@ -20,7 +20,7 @@ def flatten_list(input_list):
     return flat_list
 
 
-def compute_hoeffding_bound(n, confidence=0.05):
+def compute_hoeffding_bound(n, confidence=0.9):
 
     """Computes the Hoeffding bound for an empiric value given the number of samples
     and the confidence
