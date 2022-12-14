@@ -245,10 +245,10 @@ def train_context(context: Context, dataset, update: bool = True):
         context.nums, n_reward, context.exp_prob, context.max_exp_reward
     )
 
-    print(f"Context features {context.features}")
-    print(f"Expected probability {context.exp_prob}")
-    print(f"Maximum expected reward {context.max_exp_reward}")
-    print(f"Weighted lower bound {context.weighted_bound}")
+    logger.debug(f"Context features {context.features}")
+    logger.debug(f"Expected probability {context.exp_prob}")
+    logger.debug(f"Maximum expected reward {context.max_exp_reward}")
+    logger.debug(f"Weighted lower bound {context.weighted_bound}")
 
 
 def tree_generation(
